@@ -125,7 +125,7 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; user-select: none; -webkit-tap-highlight-color: transparent; }
-    html, body { width: 100%; height: 100dvh; background: var(--bg-main); color: #fff; overflow-x: hidden; transition: background 0.25s ease; }
+    html, body { width: 100%; min-height: 100dvh; background: var(--bg-main); color: #fff; overflow-x: hidden; transition: background 0.25s ease; }
 
     /* ============================================================================
        1. STANDALONE LANDING HUB (NO GAME BOARD BEHIND)
@@ -161,7 +161,7 @@
       padding-bottom: 12px;
     }
     .landing-title {
-      font-size: clamp(1.6rem, 3.5vw, 2.3rem);
+      font-size: clamp(1.5rem, 3.5vw, 2.3rem);
       font-weight: 900;
       color: var(--accent);
       letter-spacing: 1px;
@@ -242,6 +242,7 @@
     }
     @media (max-width: 760px) {
       .hub-split { grid-template-columns: 1fr; }
+      .landing-container { padding: 16px 14px; }
     }
 
     .hub-menu-col {
@@ -315,7 +316,7 @@
       justify-content: center;
       position: relative;
       overflow: hidden;
-      min-height: 230px;
+      min-height: 210px;
     }
     .hub-art-svg {
       width: 100%;
@@ -334,17 +335,22 @@
     }
 
     /* ============================================================================
-       2. IN-GAME RESPONSIVE LAYOUT (HIDDEN UNTIL A GAME STARTS)
+       2. IN-GAME RESPONSIVE LAYOUT (FIXED FOR BOTH MOBILE & DESKTOP)
        ============================================================================ */
     .app-layout {
       width: 100%;
       min-height: 100dvh;
-      padding: 6px 10px;
+      padding: 6px 8px 16px;
       display: none;
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
       gap: 8px;
+      overflow-y: auto;
+    }
+    /* Crucial Mobile Fix: Always show flex layout on mobile/tablet when game is active */
+    .app-layout.active-game {
+      display: flex;
     }
     .left-spacer { display: none; }
     .main-column {
@@ -554,6 +560,22 @@
     .mid-die-zone { position: relative; display: flex; align-items: center; justify-content: center; z-index: 15; pointer-events: none; }
     .bar-col, .off-col { background: var(--bar-bg); border-radius: 4px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 6px 2px; font-size: 0.68rem; color: #bcaaa4; transition: background 0.25s ease; }
     .slot-box { width: 100%; min-height: 42%; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer; position: relative; }
+
+    @media (max-width: 600px) {
+      .board-wrap {
+        padding: 5px;
+        gap: 4px;
+        grid-template-columns: 1fr 28px 1fr 32px;
+      }
+      .bar-col, .off-col { font-size: 0.56rem; }
+      .hud { padding: 5px 8px; }
+      .score-box { font-size: 0.72rem; }
+      .score-box .score-num { font-size: 1.05rem; }
+      .btn-action { padding: 7px 11px; font-size: 0.8rem; }
+      .die { width: 36px; height: 36px; padding: 5px; }
+      .mid-die-zone .die { width: 38px; height: 38px; }
+      .pip { width: 5.5px; height: 5.5px; }
+    }
 
     .row { display: grid; grid-template-columns: repeat(6, 1fr); }
     .point { position: relative; display: flex; flex-direction: column; align-items: center; padding: 3px 0; cursor: pointer; }
@@ -1519,18 +1541,16 @@
   let disconnectDeadline = 0;
   let isWaitingForReconnect = false;
 
-  // Switches between the Standalone Landing Hub and the Active Gameplay Board
+  // Switches between the Standalone Landing Hub and the Active Gameplay Board (Works across all Mobile & Desktop widths)
   function showScreen(screenName) {
     const landing = document.getElementById("landingPage");
     const gameApp = document.getElementById("gameAppLayout");
     if (screenName === "GAME") {
       landing.style.display = "none";
-      gameApp.style.display = "";
       gameApp.classList.add("active-game");
       document.body.classList.add("in-game-mode");
       render();
     } else {
-      gameApp.style.display = "none";
       gameApp.classList.remove("active-game");
       document.body.classList.remove("in-game-mode");
       landing.style.display = "flex";
@@ -1615,7 +1635,6 @@
     if (btn2) btn2.style.display = isAdmin ? "flex" : "none";
   }
 
-  // Verifies or creates the player's identity from the top bar on the Landing Page
   async function verifyIdentityOnLanding(showSuccessHint = false) {
     ensureAudio();
     const tr = t();
@@ -1661,7 +1680,6 @@
     return true;
   }
 
-  // Opens the dedicated configuration pop-up for Host, Join, or Play vs AI
   async function openPlaySetupModal(role) {
     const ok = await verifyIdentityOnLanding(false);
     if (!ok) return;
@@ -1693,7 +1711,6 @@
     document.getElementById("playConfigModal").style.display = "none";
   }
 
-  // Launches the game from the Host, Join, or AI configuration pop-up
   async function confirmStartSelectedMode() {
     ensureAudio();
     const tr = t();
@@ -4036,7 +4053,6 @@
     document.getElementById("netBar").classList.remove("left-alert");
     document.getElementById("netStatus").textContent = t().netDefault;
 
-    // Return to the full-screen Landing Hub without the board behind
     showScreen("LANDING");
   }
 
@@ -4174,7 +4190,6 @@
     const code = String(rawCode || "").trim().toUpperCase();
     if (code.length !== 6) return alert(t().enter6CodeAlert);
 
-    // Check if the player entering this Room Code was actually the Host ('W') of this saved room within the last 5 minutes
     const backup = getActiveRoomBackup(code);
     if (backup && backup.myRole === "W") {
       hostRoom(code, backup);
@@ -4664,7 +4679,6 @@
       document.getElementById("modalRoomInput").value = pendingRoomFromUrl;
     }
 
-    // Start on the standalone Landing Hub (no board behind)
     showScreen("LANDING");
   });
 
