@@ -1,12 +1,12 @@
 // Greek Tavli Online — Global Firebase Realtime Database Engine with Salted SHA-256 PIN Hashing (database.js)
-// Setup: Paste your Firebase Realtime Database URL ending in "/tavli_db.json" into DEFAULT_CLOUD_ENDPOINT below.
+// Always points to: https://greek-tavli-online-default-rtdb.europe-west1.firebasedatabase.app/tavli_db.json
 
 const TAVLI_DB_STORAGE_KEY = "tavli_players_database_v1";
 const TAVLI_CLOUD_URL_KEY  = "tavli_cloud_server_url_v1";
 const TAVLI_HASH_SALT      = "GreekTavli_SHA256_Salt_2026_v2";
 
-// PASTE YOUR FIREBASE REALTIME DATABASE URL HERE (must end with /tavli_db.json):
-const DEFAULT_CLOUD_ENDPOINT = "https://YOUR-FIREBASE-PROJECT-default-rtdb.europe-west1.firebasedatabase.app/tavli_db.json";
+// PERMANENT FIREBASE REALTIME DATABASE ENDPOINT:
+const DEFAULT_CLOUD_ENDPOINT = "https://greek-tavli-online-default-rtdb.europe-west1.firebasedatabase.app/tavli_db.json";
 
 const INITIAL_TAVLI_DATABASE = {
   version: 2,
@@ -21,11 +21,18 @@ window.TavliDB = {
   onRemoteUpdateCallbacks: [],
 
   init() {
+    // Always enforce the Firebase Realtime Database endpoint unless a valid custom Firebase URL was explicitly set
     const savedUrl = localStorage.getItem(TAVLI_CLOUD_URL_KEY);
-    if (savedUrl && savedUrl.trim().startsWith("http")) {
-      this.cloudUrl = savedUrl.trim();
+    if (
+      savedUrl &&
+      savedUrl.trim().startsWith("https://") &&
+      !savedUrl.includes("YOUR-FIREBASE-PROJECT") &&
+      !savedUrl.includes("kvdb.io")
+    ) {
+      this.cloudUrl = this.normalizeEndpointUrl(savedUrl.trim());
     } else {
       this.cloudUrl = DEFAULT_CLOUD_ENDPOINT;
+      localStorage.setItem(TAVLI_CLOUD_URL_KEY, DEFAULT_CLOUD_ENDPOINT);
     }
 
     const raw = localStorage.getItem(TAVLI_DB_STORAGE_KEY);
@@ -45,6 +52,7 @@ window.TavliDB = {
 
     this.sanitizeAllStatsConsistency();
     this.migrateLegacyPlaintextPins();
+    // Immediately sync with Firebase on startup
     this.pullFromServer();
     return this.data;
   },
@@ -82,7 +90,7 @@ window.TavliDB = {
     });
   },
 
-  // Salted SHA-256 One-Way Hash so plaintext PINs are NEVER stored in the database
+  // Salted SHA-256 One-Way Hash so plaintext PINs are NEVER stored in Firebase
   async hashPin(name, pin) {
     const normName = this.normalizeKey(name);
     const cleanPin = String(pin || "").trim();
@@ -135,7 +143,9 @@ window.TavliDB = {
 
   normalizeEndpointUrl(rawUrl) {
     let clean = String(rawUrl || "").trim();
-    if (!clean || clean.includes("YOUR-FIREBASE-PROJECT")) return "";
+    if (!clean || clean.includes("YOUR-FIREBASE-PROJECT") || clean.includes("kvdb.io")) {
+      return DEFAULT_CLOUD_ENDPOINT;
+    }
     if ((clean.includes("firebaseio.com") || clean.includes("firebasedatabase.app")) && !clean.endsWith(".json")) {
       clean = clean.replace(/\/+$/, "") + "/tavli_db.json";
     }
@@ -148,11 +158,6 @@ window.TavliDB = {
 
   async setCloudUrl(newUrl) {
     const clean = this.normalizeEndpointUrl(newUrl);
-    if (!clean) {
-      this.cloudUrl = DEFAULT_CLOUD_ENDPOINT;
-      localStorage.removeItem(TAVLI_CLOUD_URL_KEY);
-      return false;
-    }
     this.cloudUrl = clean;
     localStorage.setItem(TAVLI_CLOUD_URL_KEY, clean);
     const pulled = await this.pullFromServer();
@@ -170,7 +175,7 @@ window.TavliDB = {
     if (!this.data) this.init();
     this.data.lastUpdated = Date.now();
     this.saveLocalOnly();
-    this.pushToServer(!skipMergeBeforePush);
+    return this.pushToServer(!skipMergeBeforePush);
   },
 
   async pullFromServer() {
@@ -197,7 +202,7 @@ window.TavliDB = {
         }
       }
     } catch (e) {
-      // Offline or unconfigured endpoint
+      // Offline fallback
     }
     return false;
   },
@@ -278,10 +283,10 @@ window.TavliDB = {
         }
         delete locUser.pin;
 
-        const remGames = (remUser.stats && remUser.stats.gamesPlayed) || 0;
-        const locGames = (locUser.stats && locUser.stats.gamesPlayed) || 0;
-        const remSets  = (remUser.stats && remUser.stats.setsPlayed) || 0;
-        const locSets  = (locUser.stats && locUser.stats.setsPlayed) || 0;
+        const remGames = ((remUser.stats && remUser.stats.gamesWon) || 0) + ((remUser.stats && remUser.stats.gamesLost) || 0);
+        const locGames = ((locUser.stats && locUser.stats.gamesWon) || 0) + ((locUser.stats && locUser.stats.gamesLost) || 0);
+        const remSets  = ((remUser.stats && remUser.stats.setsWon) || 0) + ((remUser.stats && remUser.stats.setsLost) || 0);
+        const locSets  = ((locUser.stats && locUser.stats.setsWon) || 0) + ((locUser.stats && locUser.stats.setsLost) || 0);
 
         if (remTime > locTime || remGames > locGames || remSets > locSets) {
           locUser.name = remUser.name;
@@ -381,19 +386,18 @@ window.TavliDB = {
       delete existing.pin;
       existing.name = cleanName;
       existing.updatedAt = Date.now();
-      this.save();
-      await this.pushToServer(true);
+      await this.save();
       return { ok: true, mode: "LOGIN", user: existing };
     }
 
     const newUser = this.createBlankUserWithHash(cleanName, computedHash);
     this.data.users[key] = newUser;
-    this.save();
-    await this.pushToServer(true);
+    await this.save();
     return { ok: true, mode: "CREATED", user: newUser };
   },
 
   async updateCredentialsAsync(oldName, newName, newPinOptional, currentPinForRehash = "") {
+    await this.pullFromServer();
     if (!this.data) this.init();
     const oldKey = this.normalizeKey(oldName);
     const cleanNewName = String(newName || "").trim();
@@ -441,7 +445,7 @@ window.TavliDB = {
       });
     }
 
-    this.save(true);
+    await this.save(true);
     return { ok: true, user };
   },
 
@@ -496,11 +500,10 @@ window.TavliDB = {
       delete this.data.users[oldKey];
     }
 
-    this.save(true);
+    await this.save(true);
     return { ok: true, user };
   },
 
-  // Admin method to edit or delete a specific opponent record inside a player's profile
   adminSaveOpponentRecord(userKey, oppKey, fields) {
     if (!this.data) this.init();
     const u = this.data.users[this.normalizeKey(userKey)];
@@ -572,8 +575,6 @@ window.TavliDB = {
     return user.stats.opponents[oppKey];
   },
 
-  // Every completed game (whether won Moni +1 or Diplo +2 on the match scoreboard)
-  // always counts as 1 Game Won / 1 Game Lost (and 1 Game Played) in both Profile and Opponent stats!
   recordGameOutcome(playerName, opponentName, variant, didWin) {
     if (this.isAiPlayerName(playerName) || this.isAiPlayerName(opponentName)) return;
     if (!this.data) this.init();
@@ -608,7 +609,6 @@ window.TavliDB = {
     this.save();
   },
 
-  // Every completed set always counts as 1 Set Won / 1 Set Lost in both Profile and Opponent stats!
   recordSetOutcome(playerName, opponentName, didWin) {
     if (this.isAiPlayerName(playerName) || this.isAiPlayerName(opponentName)) return;
     if (!this.data) this.init();
@@ -767,7 +767,7 @@ window.TavliDB = {
       this.data = parsed;
       this.sanitizeAllStatsConsistency();
       await this.migrateLegacyPlaintextPins();
-      this.save(true);
+      await this.save(true);
       return { ok: true };
     } catch (e) {
       return { ok: false, message: "Could not parse JSON database file." };
