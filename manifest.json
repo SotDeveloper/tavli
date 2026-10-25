@@ -1,0 +1,18 @@
+{
+  "name": "Greek Tavli Online",
+  "short_name": "Tavli",
+  "description": "Greek Tavli Match (Portes, Plakoto, Fevga) with Hardware CSPRNG Dice, AI, Global Server Leaderboard and P2P Multiplayer",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#181818",
+  "theme_color": "#3e2723",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/8002/8002123.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
