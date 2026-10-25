@@ -127,19 +127,6 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; user-select: none; -webkit-tap-highlight-color: transparent; }
     html, body { width: 100%; min-height: 100dvh; background: var(--bg-main); color: #fff; overflow-x: hidden; transition: background 0.25s ease; }
 
-    /* Small Version Badge on Bottom-Right */
-    .version-watermark {
-      position: fixed;
-      bottom: 5px;
-      right: 8px;
-      font-size: 0.68rem;
-      color: rgba(255, 255, 255, 0.42);
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      z-index: 9990;
-      pointer-events: none;
-    }
-
     /* ============================================================================
        1. STANDALONE LANDING HUB (NO GAME BOARD BEHIND)
        ============================================================================ */
@@ -348,12 +335,12 @@
     }
 
     /* ============================================================================
-       2. IN-GAME RESPONSIVE LAYOUT (ROCK-SOLID MOBILE & DESKTOP)
+       2. IN-GAME RESPONSIVE LAYOUT (FIXED FOR BOTH MOBILE & DESKTOP)
        ============================================================================ */
     .app-layout {
       width: 100%;
       min-height: 100dvh;
-      padding: 6px 8px 20px;
+      padding: 6px 8px 16px;
       display: none;
       flex-direction: column;
       align-items: center;
@@ -361,21 +348,20 @@
       gap: 8px;
       overflow-y: auto;
     }
+    /* Crucial Mobile Fix: Always show flex layout on mobile/tablet when game is active */
     .app-layout.active-game {
-      display: flex !important;
+      display: flex;
     }
     .left-spacer { display: none; }
     .main-column {
       display: flex;
       flex-direction: column;
       align-items: center;
-      width: 100%;
-      max-width: 720px;
+      width: min(100%, 720px);
       flex-shrink: 0;
     }
     .side-column {
-      width: 100%;
-      max-width: 720px;
+      width: min(100%, 720px);
       display: flex;
       flex-direction: column;
       gap: 6px;
@@ -389,7 +375,7 @@
         height: 100dvh;
         max-height: 100dvh;
         min-height: 0;
-        display: grid !important;
+        display: grid;
         grid-template-columns: 1fr auto 1fr;
         align-items: center;
         gap: 16px;
@@ -568,35 +554,15 @@
     .score-box .score-num { font-size: 1.25rem; font-weight: bold; color: var(--accent); }
     .variant-badge { background: var(--wood-mid); padding: 3px 12px; border-radius: 16px; font-weight: bold; font-size: 0.85rem; color: #ffecb3; display: inline-block; }
 
-    /* Board Layout — Explicit Height Guarantee for Mobile Safari & Chrome */
-    .board-wrap {
-      width: 100%;
-      height: clamp(235px, 68vw, 520px);
-      background: var(--wood-dark);
-      padding: 8px;
-      border-radius: 12px;
-      display: grid;
-      grid-template-columns: 1fr 38px 1fr 44px;
-      gap: 6px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
-      position: relative;
-      flex-shrink: 0;
-      transition: background 0.25s ease;
-    }
-    @media (min-width: 960px) {
-      .board-wrap {
-        height: auto;
-        aspect-ratio: 4 / 3;
-      }
-    }
-    .half-board { width: 100%; height: 100%; background: var(--board-bg); display: grid; grid-template-rows: 1fr 20px 1fr; border-radius: 4px; overflow: hidden; position: relative; transition: background 0.25s ease; }
+    /* Board Layout */
+    .board-wrap { width: 100%; aspect-ratio: 4 / 3; background: var(--wood-dark); padding: 8px; border-radius: 12px; display: grid; grid-template-columns: 1fr 38px 1fr 44px; gap: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); position: relative; transition: background 0.25s ease; }
+    .half-board { background: var(--board-bg); display: grid; grid-template-rows: 1fr 20px 1fr; border-radius: 4px; overflow: hidden; position: relative; transition: background 0.25s ease; }
     .mid-die-zone { position: relative; display: flex; align-items: center; justify-content: center; z-index: 15; pointer-events: none; }
-    .bar-col, .off-col { height: 100%; background: var(--bar-bg); border-radius: 4px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 6px 2px; font-size: 0.68rem; color: #bcaaa4; transition: background 0.25s ease; }
+    .bar-col, .off-col { background: var(--bar-bg); border-radius: 4px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 6px 2px; font-size: 0.68rem; color: #bcaaa4; transition: background 0.25s ease; }
     .slot-box { width: 100%; min-height: 42%; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer; position: relative; }
 
     @media (max-width: 600px) {
       .board-wrap {
-        height: clamp(230px, 72vw, 390px);
         padding: 5px;
         gap: 4px;
         grid-template-columns: 1fr 28px 1fr 32px;
@@ -611,8 +577,8 @@
       .pip { width: 5.5px; height: 5.5px; }
     }
 
-    .row { width: 100%; height: 100%; display: grid; grid-template-columns: repeat(6, 1fr); }
-    .point { width: 100%; height: 100%; position: relative; display: flex; flex-direction: column; align-items: center; padding: 3px 0; cursor: pointer; }
+    .row { display: grid; grid-template-columns: repeat(6, 1fr); }
+    .point { position: relative; display: flex; flex-direction: column; align-items: center; padding: 3px 0; cursor: pointer; }
     .row.bottom .point { flex-direction: column-reverse; }
     .point::before { content: ""; position: absolute; width: 100%; height: 88%; z-index: 0; transition: background 0.25s ease; }
     .row.top .point:nth-child(odd)::before { background: var(--point-dark); clip-path: polygon(0 0, 100% 0, 50% 100%); top: 0; }
@@ -628,7 +594,7 @@
     .slot-box .dest-badge { bottom: 4px; }
 
     /* Checkers & 8 Distinct Color Palettes */
-    .checker { width: 78%; aspect-ratio: 1; border-radius: 50%; z-index: 1; display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: bold; margin: 1px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.55); position: relative; flex-shrink: 0; }
+    .checker { width: 78%; aspect-ratio: 1; border-radius: 50%; z-index: 1; display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: bold; margin: 1px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.55); position: relative; }
     .checker.clr-white,  .swatch-circle.clr-white  { background: radial-gradient(circle at 30% 30%, #ffffff, #cfcfcf); color: #111; border: 2px solid #aaa; }
     .checker.clr-black,  .swatch-circle.clr-black  { background: radial-gradient(circle at 30% 30%, #4a4a4a, #111111); color: #fff; border: 2px solid #000; }
     .checker.clr-blue,   .swatch-circle.clr-blue   { background: radial-gradient(circle at 30% 30%, #42a5f5, #0d47a1); color: #fff; border: 2px solid #082e6b; }
@@ -711,9 +677,6 @@
 </head>
 <body data-theme="classic">
 
-  <!-- Small Version Watermark on Bottom-Right -->
-  <div class="version-watermark">v16</div>
-
   <!-- ==========================================================================
        MAIN LANDING HUB SCREEN (NO GAME BOARD BEHIND)
        ========================================================================== -->
@@ -793,3 +756,4179 @@
             <rect x="16" y="14" width="154" height="212" rx="4" fill="#f5e6d3"/>
             <rect x="190" y="14" width="154" height="212" rx="4" fill="#f5e6d3"/>
             <rect x="172" y="14" width="16" height="212" fill="#271815"/>
+            <g>
+              <polygon points="20,14 44,14 32,102" fill="#8d3b29"/>
+              <polygon points="45,14 69,14 57,102" fill="#c89d66"/>
+              <polygon points="70,14 94,14 82,102" fill="#8d3b29"/>
+              <polygon points="95,14 119,14 107,102" fill="#c89d66"/>
+              <polygon points="120,14 144,14 132,102" fill="#8d3b29"/>
+              <polygon points="145,14 169,14 157,102" fill="#c89d66"/>
+              <polygon points="20,226 44,226 32,138" fill="#c89d66"/>
+              <polygon points="45,226 69,226 57,138" fill="#8d3b29"/>
+              <polygon points="70,226 94,226 82,138" fill="#c89d66"/>
+              <polygon points="95,226 119,226 107,138" fill="#8d3b29"/>
+              <polygon points="120,226 144,226 132,138" fill="#c89d66"/>
+              <polygon points="145,226 169,226 157,138" fill="#8d3b29"/>
+            </g>
+            <g>
+              <polygon points="192,14 216,14 204,102" fill="#8d3b29"/>
+              <polygon points="217,14 241,14 229,102" fill="#c89d66"/>
+              <polygon points="242,14 266,14 254,102" fill="#8d3b29"/>
+              <polygon points="267,14 291,14 279,102" fill="#c89d66"/>
+              <polygon points="292,14 316,14 304,102" fill="#8d3b29"/>
+              <polygon points="317,14 341,14 329,102" fill="#c89d66"/>
+              <polygon points="192,226 216,226 204,138" fill="#c89d66"/>
+              <polygon points="217,226 241,226 229,138" fill="#8d3b29"/>
+              <polygon points="242,226 266,226 254,138" fill="#c89d66"/>
+              <polygon points="267,226 291,226 279,138" fill="#8d3b29"/>
+              <polygon points="292,226 316,226 304,138" fill="#c89d66"/>
+              <polygon points="317,226 341,226 329,138" fill="#8d3b29"/>
+            </g>
+            <!-- Checkers & Dice Illustration -->
+            <circle cx="32" cy="28" r="10" fill="#fff" stroke="#aaa" stroke-width="2"/>
+            <circle cx="32" cy="49" r="10" fill="#fff" stroke="#aaa" stroke-width="2"/>
+            <circle cx="329" cy="212" r="10" fill="#222" stroke="#000" stroke-width="2"/>
+            <circle cx="329" cy="191" r="10" fill="#222" stroke="#000" stroke-width="2"/>
+            <circle cx="204" cy="212" r="10" fill="#fff" stroke="#aaa" stroke-width="2"/>
+            <circle cx="204" cy="191" r="10" fill="#fff" stroke="#aaa" stroke-width="2"/>
+            <rect x="82" y="104" width="28" height="28" rx="5" fill="#fffdf9" stroke="#bfa980" stroke-width="2"/>
+            <circle cx="90" cy="112" r="2.6" fill="#111"/>
+            <circle cx="96" cy="118" r="2.6" fill="#111"/>
+            <circle cx="102" cy="124" r="2.6" fill="#111"/>
+            <rect x="234" y="104" width="28" height="28" rx="5" fill="#fffdf9" stroke="#bfa980" stroke-width="2"/>
+            <circle cx="241" cy="111" r="2.6" fill="#111"/>
+            <circle cx="255" cy="111" r="2.6" fill="#111"/>
+            <circle cx="241" cy="118" r="2.6" fill="#111"/>
+            <circle cx="255" cy="118" r="2.6" fill="#111"/>
+            <circle cx="241" cy="125" r="2.6" fill="#111"/>
+            <circle cx="255" cy="125" r="2.6" fill="#111"/>
+          </svg>
+          <div class="hub-art-caption" id="hubArtCaption">100% Hardware CSPRNG Dice • P2P &amp; AI</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       PLAY CONFIGURATION POP-UP MODAL (OPENS WHEN CLICKING HOST, JOIN, OR AI)
+       ========================================================================== -->
+  <div class="modal-overlay" id="playConfigModal" style="display:none;">
+    <div class="modal-card">
+      <h2 id="playConfigTitle">Host a Game</h2>
+
+      <label class="sec-label" id="lblCheckerColor">Your Checker Colour</label>
+      <div class="color-grid" id="colorGrid"></div>
+
+      <!-- AI-Only Difficulty Options (Shown only for Play vs AI) -->
+      <div id="aiOnlySettings" style="display:none;">
+        <label class="sec-label" id="lblAiDiff">AI Difficulty</label>
+        <div class="toggle-row">
+          <div class="toggle-opt" id="aiEasy" onclick="selectAiDifficulty('EASY')">Easy</div>
+          <div class="toggle-opt active" id="aiMedium" onclick="selectAiDifficulty('MEDIUM')">Medium</div>
+          <div class="toggle-opt" id="aiHard" onclick="selectAiDifficulty('HARD')">Hard (Probability)</div>
+        </div>
+      </div>
+
+      <!-- Join-Only Room Code Input (Shown only for Join Friend's Game) -->
+      <div id="joinOnlySettings" style="display:none;">
+        <label class="sec-label" id="lblRoomCode" for="modalRoomInput">Room Code (Join or Reconnect)</label>
+        <input type="text" id="modalRoomInput" placeholder="6-CHAR CODE" maxlength="6" style="text-transform:uppercase; letter-spacing:2px; font-weight:bold;" onkeydown="if(event.key==='Enter') confirmStartSelectedMode()" />
+      </div>
+
+      <!-- Host & AI Match Settings (Shown for Host Game & Play vs AI) -->
+      <div id="hostOnlySettings">
+        <label class="sec-label" id="lblGameSel">Game Selection</label>
+        <div class="toggle-row">
+          <div class="toggle-opt active" id="modeFull" onclick="selectGameMode('FULL')">Full Set (All 3)</div>
+          <div class="toggle-opt" id="modePortes" onclick="selectGameMode('PORTES')">Portes</div>
+          <div class="toggle-opt" id="modePlakoto" onclick="selectGameMode('PLAKOTO')">Plakoto</div>
+          <div class="toggle-opt" id="modeFevga" onclick="selectGameMode('FEVGA')">Fevga</div>
+        </div>
+
+        <label class="sec-label" id="lblNumGames">Number of Games (1, 3, 5, 7)</label>
+        <div class="num-row" id="targetScoreRow"></div>
+
+        <label class="sec-label" id="lblEndTurn">End Turn Button</label>
+        <div class="toggle-row">
+          <div class="toggle-opt active" id="optEndTurnYes" onclick="selectEndTurnPref(true)">On</div>
+          <div class="toggle-opt" id="optEndTurnNo" onclick="selectEndTurnPref(false)">Off (Auto-End)</div>
+        </div>
+
+        <label class="sec-label" id="lblAutoRoll">Auto-Roll Dice</label>
+        <div class="toggle-row">
+          <div class="toggle-opt active" id="optAutoRollNo" onclick="selectAutoRollPref(false)">Off (Manual)</div>
+          <div class="toggle-opt" id="optAutoRollYes" onclick="selectAutoRollPref(true)">On (Auto-Roll)</div>
+        </div>
+      </div>
+
+      <div class="modal-btn-row">
+        <button class="btn-back-cancel" id="btnConfigBack" onclick="closePlayConfigModal()">Back</button>
+        <button class="btn-primary-start" id="modalSubmitBtn" onclick="confirmStartSelectedMode()">Start Game</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Profile Pop-Up Modal -->
+  <div class="modal-overlay" id="profileModal" style="display:none;">
+    <div class="modal-card wide-modal">
+      <h2 id="profModalTitle">Player Profile</h2>
+      <div id="profileContent"></div>
+      <button class="modal-close-btn" id="profCloseBtn" onclick="closeProfileModal()">Back / Close</button>
+    </div>
+  </div>
+
+  <!-- 3. Global Server Leaderboard Pop-Up Modal -->
+  <div class="modal-overlay" id="leaderboardModal" style="display:none;">
+    <div class="modal-card wide-modal">
+      <h2 id="lbModalTitle">Global Leaderboard</h2>
+      <div id="lbSyncStatus" style="font-size:0.74rem; color:#81c784; text-align:center; margin-bottom:6px;">🌐 Live Server Synced</div>
+      <div id="leaderboardContent"></div>
+      <button class="modal-close-btn" id="lbCloseBtn" onclick="closeLeaderboardModal()">Back / Close</button>
+    </div>
+  </div>
+
+  <!-- 4. Settings Pop-Up Modal (Language + 8 Contrast Board/UI Themes + Edit Name & PIN) -->
+  <div class="modal-overlay" id="settingsModal" style="display:none;">
+    <div class="modal-card wide-modal">
+      <h2 id="settingsModalTitle">Settings</h2>
+
+      <div class="sub-heading" id="lblSettingsLang">Language / Γλώσσα</div>
+      <div class="toggle-row">
+        <div class="toggle-opt active" id="setLangEN" onclick="selectLangPref('en')">English</div>
+        <div class="toggle-opt" id="setLangEL" onclick="selectLangPref('el')">Ελληνικά</div>
+      </div>
+
+      <div class="sub-heading" id="lblSettingsTheme">Board &amp; UI Colour Theme (8 Themes)</div>
+      <div class="theme-grid">
+        <div class="theme-card active" id="themeCard_classic" onclick="selectTheme('classic')">
+          <div class="theme-preview">
+            <div style="background:#8d3b29;"></div>
+            <div style="background:#f5e6d3;"></div>
+          </div>
+          <div>
+            <div style="font-weight:bold; font-size:0.8rem;" id="thNameClassic">Classic Walnut</div>
+            <div style="font-size:0.66rem; color:#bcaaa4;">Warm Wood &amp; Cream</div>
+          </div>
+        </div>
+
+        <div class="theme-card" id="themeCard_blue" onclick="selectTheme('blue')">
+          <div class="theme-preview">
+            <div style="background:#155293;"></div>
+            <div style="background:#e6f0fa;"></div>
+          </div>
+          <div>
+            <div style="font-weight:bold; font-size:0.8rem;" id="thNameBlue">Aegean Blue</div>
+            <div style="font-size:0.66rem; color:#bcaaa4;">Navy &amp; Crisp Ice</div>
+          </div>
+        </div>
+
+        <div class="theme-card" id="themeCard_green" onclick="selectTheme('green')">
+          <div class="theme-preview">
+            <div style="background:#1f6b43;"></div>
+            <div style="background:#ebf5ee;"></div>
+          </div>
+          <div>
+            <div style="font-weight:bold; font-size:0.8rem;" id="thNameGreen">Emerald Club</div>
+            <div style="font-size:0.66rem; color:#bcaaa4;">Forest &amp; Mint Ivory</div>
+          </div>
+        </div>
+
+        <div class="theme-card" id="themeCard_white" onclick="selectTheme('white')">
+          <div class="theme-preview">
+            <div style="background:#343a40;"></div>
+            <div style="background:#f8f9fa;"></div>
+          </div>
+          <div>
+            <div style="font-weight:bold; font-size:0.8rem;" id="thNameWhite">Marble White</div>
+            <div style="font-size:0.66rem; color:#bcaaa4;">Slate &amp; Alabaster</div>
+          </div>
+        </div>
+
+        <div class="theme-card" id="themeCard_amethyst" onclick="selectTheme('amethyst')">
+          <div class="theme-preview">
+            <div style="background:#5e35b1;"></div>
+            <div style="background:#f3ecf8;"></div>
+          </div>
+          <div>
+            <div style="font-weight:bold; font-size:0.8rem;" id="thNameAmethyst">Royal Amethyst</div>
+            <div style="font-size:0.66rem; color:#bcaaa4;">Deep Plum &amp; Lavender</div>
+          </div>
+        </div>
+
+        <div class="theme-card" id="themeCard_terracotta" onclick="selectTheme('terracotta')">
+          <div class="theme-preview">
+            <div style="background:#b7412b;"></div>
+            <div style="background:#fbf0e6;"></div>
+          </div>
+          <div>
+            <div style="font-weight:bold; font-size:0.8rem;" id="thNameTerracotta">Sunset Terracotta</div>
+            <div style="font-size:0.66rem; color:#bcaaa4;">Warm Clay &amp; Sand</div>
+          </div>
+        </div>
+
+        <div class="theme-card" id="themeCard_midnight" onclick="selectTheme('midnight')">
+          <div class="theme-preview">
+            <div style="background:#c59b27;"></div>
+            <div style="background:#232830;"></div>
+          </div>
+          <div>
+            <div style="font-weight:bold; font-size:0.8rem;" id="thNameMidnight">Midnight Gold</div>
+            <div style="font-size:0.66rem; color:#bcaaa4;">Obsidian &amp; Gold</div>
+          </div>
+        </div>
+
+        <div class="theme-card" id="themeCard_sakura" onclick="selectTheme('sakura')">
+          <div class="theme-preview">
+            <div style="background:#ad3966;"></div>
+            <div style="background:#fdf2f6;"></div>
+          </div>
+          <div>
+            <div style="font-weight:bold; font-size:0.8rem;" id="thNameSakura">Sakura Blossom</div>
+            <div style="font-size:0.66rem; color:#bcaaa4;">Rosewood &amp; Blush</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Edit Name & 4-Digit PIN Inside Settings -->
+      <div id="settingsAccountSection"></div>
+
+      <button class="modal-close-btn" id="settingsCloseBtn" onclick="closeSettingsModal()">Back / Close</button>
+    </div>
+  </div>
+
+  <!-- 5. Resign Offer Selection Modal -->
+  <div class="modal-overlay" id="resignOfferModal" style="display:none;">
+    <div class="modal-card" style="max-width:360px;">
+      <h2 id="resignModalTitle">🏳️ Resign Current Game</h2>
+      <p id="resignModalDesc" style="font-size:0.85rem; color:#ffecb3; margin-bottom:14px;">
+        Choose the resignation value to offer your opponent:
+      </p>
+      <div style="display:flex; gap:10px; margin-bottom:10px;">
+        <button class="btn-action" style="flex:1; background:var(--accent);" onclick="sendResignOffer(1)" id="btnOfferMoni">Moni (+1 pt)</button>
+        <button class="btn-action" style="flex:1; background:#ff7043; color:#fff;" onclick="sendResignOffer(2)" id="btnOfferDiplo">Diplo (+2 pts)</button>
+      </div>
+      <button class="modal-close-btn" onclick="closeResignOfferModal()" id="btnCancelResign">Cancel</button>
+    </div>
+  </div>
+
+  <!-- 6. Incoming Resign Request Modal -->
+  <div class="modal-overlay" id="resignRespondModal" style="display:none;">
+    <div class="modal-card" style="max-width:380px;">
+      <h2 id="resignRespTitle">🏳️ Resignation Offered</h2>
+      <p id="resignRespDesc" style="font-size:0.88rem; color:#fff; margin:12px 0 16px; line-height:1.4;"></p>
+      <div style="display:flex; gap:10px;">
+        <button class="btn-play-again" onclick="respondToResignOffer(true)" id="btnAcceptResign">✓ Accept Win</button>
+        <button class="btn-exit-menu" onclick="respondToResignOffer(false)" id="btnDeclineResign">✕ Decline</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. Celebratory Set Victory Summary Pop-Up Modal (with 2-Second Confetti) -->
+  <div class="modal-overlay" id="setSummaryModal" style="display:none;">
+    <div class="modal-card wide-modal celebration-card">
+      <div class="confetti-layer" id="confettiLayer"></div>
+      <div style="position:relative; z-index:2;" id="setSummaryContent"></div>
+    </div>
+  </div>
+
+  <!-- 8. Sotiris Admin Database Pop-Up Modal -->
+  <div class="modal-overlay" id="adminModal" style="display:none;">
+    <div class="modal-card xl-modal">
+      <h2 id="adminModalTitle">🛠️ Sotiris Admin — Global Server Database Manager</h2>
+      <div id="adminFeedback" style="font-size:0.8rem; color:#00e676; font-weight:bold; margin-bottom:6px; min-height:18px;"></div>
+      <div id="adminTableContainer"></div>
+      <div id="adminOpponentsEditor" style="display:none; background:rgba(0,0,0,0.35); border:1px solid var(--accent); border-radius:8px; padding:10px; margin-top:8px;"></div>
+
+      <div class="sub-heading">Add New Player to Server Database</div>
+      <div style="display:grid; grid-template-columns: 1fr 120px auto; gap:6px; align-items:center;">
+        <input type="text" id="adminNewName" placeholder="New Player Name" maxlength="16" />
+        <input type="password" id="adminNewPin" placeholder="4-Digit PIN" maxlength="4" inputmode="numeric" />
+        <button class="btn-sm" style="padding:8px 14px;" onclick="adminAddNewUser()">+ Add User</button>
+      </div>
+
+      <div class="sub-heading">Global Cloud Server Endpoint (Firebase Realtime DB URL ending in /tavli_db.json)</div>
+      <div style="display:grid; grid-template-columns: 1fr auto; gap:6px; align-items:center;">
+        <input type="text" id="adminCloudUrlInput" placeholder="https://your-project-default-rtdb.europe-west1.firebasedatabase.app/tavli_db.json" style="text-align:left; font-size:0.78rem;" />
+        <button class="btn-sm" style="padding:8px 14px;" onclick="adminSaveCloudUrl()">Save Server URL</button>
+      </div>
+
+      <div class="sub-heading">Database Backup &amp; Restore (.json)</div>
+      <div style="display:flex; gap:8px; margin-top:6px;">
+        <button class="btn-sm" style="flex:1; padding:9px;" onclick="window.TavliDB.downloadDatabaseFile()">⬇️ Download Database (.json)</button>
+        <button class="btn-sm" style="flex:1; padding:9px; background:#4fc3f7;" onclick="document.getElementById('adminDbFileInput').click()">⬆️ Upload Database (.json)</button>
+        <input type="file" id="adminDbFileInput" accept=".json" style="display:none;" onchange="handleImportDBFile(event)" />
+      </div>
+
+      <button class="modal-close-btn" onclick="closeAdminModal()">Close Admin Panel</button>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       IN-GAME BOARD & CHAT LAYOUT (SHOWN ONLY DURING GAMEPLAY)
+       ========================================================================== -->
+  <div class="app-layout" id="gameAppLayout">
+    <div class="left-spacer"></div>
+
+    <div class="main-column">
+      <!-- Online P2P, Reconnect Countdown & Audio Bar -->
+      <div class="net-bar" id="netBar">
+        <div style="display:flex; align-items:center; flex-wrap:wrap;">
+          <span id="netStatus">Room Active</span>
+          <span class="countdown-pill" id="disconnectCountdown" style="display:none;">05:00</span>
+        </div>
+        <div class="net-controls">
+          <button class="btn-sm btn-share" id="shareBtn" onclick="shareInviteLink(activeRoomCode)">Share Invite</button>
+          <button class="btn-sm btn-mute" id="muteBtn" onclick="toggleSound()">Sound: ON</button>
+          <button class="btn-sm" style="background:#e53935; color:#fff;" id="menuReturnBtn" onclick="handleExitToInitialMenu(true)">🏠 Menu</button>
+        </div>
+      </div>
+
+      <!-- Match Scoreboard -->
+      <div class="hud">
+        <div class="score-box"><span id="colorLabelW">White</span> (<span id="nameW">Player 1</span>)<br><span class="score-num" id="scoreW">0</span> / <span id="targetW">7</span></div>
+        <div style="text-align:center;">
+          <div class="variant-badge" id="gameTitle">PORTES</div>
+          <div id="turnText" style="font-size:0.8rem; margin-top:3px; color:#ffe082;">Roll 1 Die for First Turn</div>
+        </div>
+        <div class="score-box"><span id="colorLabelB">Black</span> (<span id="nameB">Player 2</span>)<br><span class="score-num" id="scoreB">0</span> / <span id="targetB">7</span></div>
+      </div>
+
+      <!-- Game Board -->
+      <div class="board-wrap">
+        <div class="half-board">
+          <div class="row top" id="top-left"></div>
+          <div class="mid-die-zone" id="rollOffLeftZone"></div>
+          <div class="row bottom" id="bottom-left"></div>
+        </div>
+
+        <div class="bar-col">
+          <div class="slot-box" id="barTop"></div>
+          <span id="lblBar">BAR</span>
+          <div class="slot-box" id="barBottom"></div>
+        </div>
+
+        <div class="half-board">
+          <div class="row top" id="top-right"></div>
+          <div class="mid-die-zone" id="rollOffRightZone"></div>
+          <div class="row bottom" id="bottom-right"></div>
+        </div>
+
+        <div class="off-col">
+          <div class="slot-box" id="offTop" onclick="attemptBearOff()"></div>
+          <span id="lblOff">OFF</span>
+          <div class="slot-box" id="offBottom" onclick="attemptBearOff()"></div>
+        </div>
+      </div>
+
+      <!-- Dice, Undo, End Turn, Resign & Status -->
+      <div class="controls">
+        <div class="dice-area">
+          <button class="btn-action" id="rollBtn" onclick="handleRoll()">Roll Dice</button>
+          <div id="diceContainer" style="display:flex; gap:8px;"></div>
+          <button class="btn-action btn-undo" id="undoBtn" onclick="handleUndo()" disabled>Undo</button>
+          <button class="btn-action btn-done" id="endTurnBtn" onclick="handleEndTurn()" disabled>End Turn</button>
+          <button class="btn-action btn-resign" id="resignBtn" onclick="openResignOfferModal()" disabled>🏳️ Resign</button>
+        </div>
+        <div class="status-log" id="statusLog">Throw 1 die each to see who plays first</div>
+      </div>
+    </div>
+
+    <!-- Chat Column with Profile, Leaderboard & Settings on Top, and Sotiris Admin Button Underneath -->
+    <div class="side-column">
+      <div class="side-top-btns">
+        <button id="btnOpenProfile" onclick="openProfileModal()">👤 <span id="lblBtnProfile">Profile</span></button>
+        <button id="btnOpenLeaderboard" onclick="openLeaderboardModal()">🏆 <span id="lblBtnLeaderboard">Leaderboard</span></button>
+        <button id="btnOpenSettings" onclick="openSettingsModal()">⚙️ <span id="lblBtnSettings">Settings</span></button>
+      </div>
+
+      <div class="chat-box">
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-line"><span class="chat-sender" id="welcomeSender" style="color:#81c784;">System:</span><span id="welcomeMsg"> Welcome! Throw a die to see who plays first.</span></div>
+        </div>
+        <div class="typing-status" id="typingIndicator"></div>
+        <div class="chat-input-row">
+          <input type="text" id="chatInput" placeholder="Write a message..." maxlength="140" oninput="handleChatTyping()" onkeydown="if(event.key==='Enter') sendChat()" />
+          <button id="sendChatBtn" onclick="sendChat()">Send</button>
+        </div>
+      </div>
+
+      <!-- Exclusive Admin Button Under Chat (Visible Only When Logged in as "Sotiris") -->
+      <button class="admin-btn-under-chat" id="btnAdminPanel" onclick="openAdminModal()">
+        🛠️ <span id="lblBtnAdmin">Admin Database (Sotiris)</span>
+      </button>
+    </div>
+  </div>
+
+<script>
+  // --- 1. Bilingual Localization Dictionary (English & Greek) ---
+  let myLang = "en";
+  let myTheme = "classic";
+  const ALL_THEMES = ["classic", "blue", "green", "white", "amethyst", "terracotta", "midnight", "sakura"];
+  const PAGE_SIZE = 10;
+  const ROOM_BACKUP_KEY = "tavli_active_room_backup_v1";
+  const RECONNECT_WINDOW_MS = 5 * 60 * 1000;
+
+  let lbCurrentPage = 1;
+  let adminCurrentPage = 1;
+  let setGamesCurrentPage = 1;
+
+  const I18N = {
+    en: {
+      landingMainTitle: "GREEK TAVLI ONLINE",
+      landingSubTitle: "Portes • Plakoto • Fevga — Authentic Greek Backgammon",
+      lblIdentityHeader: "Enter your name / Login",
+      btnVerifyIdentity: "Verify / Login",
+      verifiedBadge: name => `✅ Logged in as "${name}"`,
+      guestBadge: name => `👤 Playing as Guest "${name}"`,
+      hubBtnHost: "Host a Game Against a Friend",
+      hubBtnJoin: "Join Friend's Game",
+      hubBtnAi: "Play Against AI",
+      hubArtCaption: "100% Hardware CSPRNG Dice • P2P & AI",
+      titleHostModal: "🎲 Host a Game Against a Friend",
+      titleJoinModal: "🤝 Join Friend's Game",
+      titleAiModal: "🤖 Play Against AI",
+      btnBack: "Back",
+      menuReturnBtn: "🏠 Menu",
+      namePlaceholder: "Enter your name",
+      optGuestNoPin: "Guest (No PIN)",
+      optEnableStore: "Store Details (PIN)",
+      pinHintExisting: name => `Account "${name}" found! Enter your 4-digit PIN:`,
+      pinHintNew: name => `New name "${name}"! Enter a 4-digit PIN to create account:`,
+      pinHintDefault: "Enter a 4-digit PIN to create or access your account",
+      pinPlaceholder: "4-Digit PIN",
+      errRegisteredNeedsPin: "ERROR CODE: ERR_PIN_REQUIRED — This name is registered. Enable Store Details and enter your 4-digit PIN.",
+      lblCheckerColor: "Your Checker Colour",
+      lblAiDiff: "AI Difficulty",
+      aiEasy: "Easy",
+      aiMedium: "Medium",
+      aiHard: "Hard (Probability)",
+      lblRoomCode: "Room Code (Join or Reconnect)",
+      roomPlaceholder: "6-CHAR CODE",
+      lblGameSel: "Game Selection",
+      modeFull: "Full Set (All 3)",
+      modePortes: "Portes",
+      modePlakoto: "Plakoto",
+      modeFevga: "Fevga",
+      lblNumGames: "Number of Games (1, 3, 5, 7)",
+      lblEndTurn: "End Turn Button",
+      optOn: "On",
+      optOffAutoEnd: "Off (Auto-End)",
+      lblAutoRoll: "Auto-Roll Dice",
+      optOffManual: "Off (Manual)",
+      optOnAutoRoll: "On (Auto-Roll)",
+      btnStartGame: "Host Room",
+      btnJoinGame: "Join / Reconnect",
+      btnStartAi: "Start vs AI",
+      netDefault: "Online Match",
+      netAiMode: diff => `Mode: vs AI (${diff}) • Stats Not Counted`,
+      shareBtn: "Share Invite",
+      soundOn: "Sound: ON",
+      soundOff: "Sound: OFF",
+      bar: "BAR",
+      off: "OFF",
+      rollBtn: "Roll Dice",
+      undoBtn: "Undo",
+      endTurnBtn: "End Turn",
+      btnProfile: "Profile",
+      btnLeaderboard: "Leaderboard",
+      btnSettings: "Settings",
+      btnAdmin: "Admin Database (Sotiris)",
+      profTitle: "Player Profile",
+      lbTitle: "Global Leaderboard",
+      lbSyncing: "🔄 Syncing with global server...",
+      lbSynced: "🌐 Live Global Server Leaderboard (SHA-256 Protected)",
+      settingsTitle: "Settings",
+      lblSettingsTheme: "Board & UI Colour Theme (8 Themes)",
+      thClassic: "Classic Walnut",
+      thBlue: "Aegean Blue",
+      thGreen: "Emerald Club",
+      thWhite: "Marble White",
+      thAmethyst: "Royal Amethyst",
+      thTerracotta: "Sunset Terracotta",
+      thMidnight: "Midnight Gold",
+      thSakura: "Sakura Blossom",
+      closeBtn: "Back / Close",
+      profGuestMsg: "You are currently playing as a Guest. Enable 'Store Details (PIN)' on the main menu to track stats!",
+      profRank: "Leaderboard Position",
+      profSets: "Sets (Won / Lost / Total)",
+      profGames: "Games (Won / Lost / Total)",
+      profEditHeading: "Edit Account (Name & 4-Digit PIN — Hashed)",
+      profNewPinPh: "New 4-Digit PIN",
+      profSaveBtn: "Save",
+      profSavedMsg: "Account updated & synced (PIN SHA-256 hashed)!",
+      profVariantHeading: "Win Rates by Game Variant (1 per Game)",
+      profTopOppHeading: "Top 3 Opponents (by Games Played)",
+      profNoOpp: "No human opponents recorded yet.",
+      lbEmpty: "No registered players in the server database yet.",
+      colRank: "#",
+      colPlayer: "Player",
+      colSets: "Win Sets",
+      colGames: "Win Games",
+      colWinRate: "Win Rate",
+      colOpponent: "Opponent",
+      colOppGames: "Games (Won / Lost)",
+      colOppSetsWL: "Sets (Won / Lost)",
+      pageOf: (cur, tot) => `Page ${cur} of ${tot}`,
+      prevPage: "◀ Prev",
+      nextPage: "Next ▶",
+      setWinHeadline: champ => `🎉 ${champ} Wins the Set!`,
+      setScoreSub: (sw, sb, target, gW, gB, totG) => `Match Score: ${sw} - ${sb} (Target: ${target}) • Stats Recorded: 1 Set, ${gW}-${gB} in ${totG} ${totG === 1 ? "Game" : "Games"}`,
+      setGamesHeading: "Games Played in This Set",
+      colGameNum: "#",
+      colVariant: "Game",
+      colWinner: "Winner",
+      colPts: "Match Pts / Stat",
+      setTopDiceHeading: "Most Rolled Dice Combination",
+      noRollsRecorded: "No rolls",
+      setPlayAgainPrompt: "Would you like to play again with the same player and settings, or exit to the main menu?",
+      btnPlayAgain: "🔄 Play Again (Same Settings)",
+      btnExitMenu: "🚪 Exit to Main Menu",
+      waitingOpponentRematch: "Waiting for opponent to confirm Play Again...",
+      resignBtn: "🏳️ Resign",
+      resignTitle: "🏳️ Resign Current Game",
+      resignDesc: "Choose the resignation value to offer your opponent:",
+      offerMoni: "Moni (+1 pt)",
+      offerDiplo: "Diplo (+2 pts)",
+      cancelBtn: "Cancel",
+      resignSent: pts => `Offered resignation (${pts === 2 ? "Diplo +2" : "Moni +1"}) — waiting for opponent...`,
+      resignRespTitle: "🏳️ Resignation Offered",
+      resignRespDesc: (name, pts) => `${name} offers to resign this game as ${pts === 2 ? "Diplo (+2 pts)" : "Moni (+1 pt)"}. Do you accept?`,
+      acceptResign: "✓ Accept Win",
+      declineResign: "✕ Decline",
+      resignDeclined: name => `${name} declined the resignation offer. Play continues!`,
+      resignAcceptedReason: (loser, winner, pts) => `${loser} resigned (${pts === 2 ? "Diplo +2" : "Moni +1"})! ${winner} wins the game.`,
+      statusInitRollOff: "Throw 1 die each to see who plays first",
+      sysLabel: "System",
+      welcomeMsg: " Welcome! Throw a die to see who plays first.",
+      chatPlaceholder: "Write a message...",
+      sendBtn: "Send",
+      variants: { PORTES: "PORTES", PLAKOTO: "PLAKOTO", FEVGA: "FEVGA" },
+      colors: {
+        white: "White", black: "Black", blue: "Blue", red: "Red",
+        brown: "Brown", yellow: "Yellow", green: "Green", purple: "Purple"
+      },
+      roll1DieTurn: p => `${p}: Roll 1 Die for First Turn`,
+      toRoll: p => `${p} to Roll`,
+      tapEndTurn: p => `${p}: Tap End Turn`,
+      moveCheckers: (p, n) => `${p}: Move Checkers (${n} left)`,
+      rolled1DieWait: (wName, d, bName) => `${wName} rolled ${d}. Now ${bName} rolls 1 die!`,
+      rolled1DieYourTurn: (wName, d) => `${wName} rolled ${d}. Your turn to roll 1 die!`,
+      rollOffTie: (r1, r2) => `Tie (${r1} vs ${r2})! Throw again to see who plays first.`,
+      rollOffWin: (wName, r1, bName, r2, winName) => `${wName}: ${r1} vs ${bName}: ${r2} — ${winName} plays first!`,
+      rollOffStart: (winName, auto) => `${winName} won the opening roll!${auto ? " Auto-rolling..." : " Roll Dice to begin."}`,
+      rolledPair: (d1, d2, dbl) => `Rolled: ${d1} & ${d2}${dbl ? " (Doubles - 4 moves!)" : ""}`,
+      noLegalMoves: p => `No legal moves for ${p} — passing turn!`,
+      movesComplete: "Moves complete — tap End Turn (or Undo to revise)",
+      moveUndone: "Move undone",
+      nextTurnStatus: (p, auto) => `${p}'s turn${auto ? " (Auto-rolling...)" : " to roll"}`,
+      manaWin: "Mother Checker (Mana) Pinned! +2 match pts (1 game win)",
+      gameWin: (p, pts, nextP) => `${p} wins (${pts === 2 ? "Diplo +2 match pts" : "Moni +1 match pt"})! ${nextP} rolls first next.`,
+      hostingWait: code => `Room: ${code} (Waiting for friend...)`,
+      connectingTo: code => `Connecting to ${code}...`,
+      roomLocked: code => `Room ${code} Locked`,
+      enter6CodeAlert: "Please enter the 6-character Room Code.",
+      oppLeftBanner: (name, code) => `⚠️ ${name} disconnected (Room ${code}) — Waiting for return:`,
+      oppLeftStatus: name => `${name} disconnected. Waiting 5 minutes for them to rejoin...`,
+      oppLeftChat: (name, code) => `${name} disconnected. State saved! They have 5 minutes to rejoin with Room Code ${code}.`,
+      oppRejoinedChat: name => `✅ ${name} reconnected! Match resumed from saved state.`,
+      oppRejoinedStatus: name => `${name} reconnected! Game resumed.`,
+      forfeitTimeoutReason: (loser, winner) => `${loser} did not return within 5 minutes — ${winner} wins the set by forfeit!`,
+      joinedTableChat: name => `${name} joined the table.`,
+      isTyping: name => `${name} is typing...`,
+      inviteCopied: "Invite link copied! Paste it to your friend.",
+      defaultPlayer: "Player"
+    },
+    el: {
+      landingMainTitle: "ΕΛΛΗΝΙΚΟ ΤΑΒΛΙ ONLINE",
+      landingSubTitle: "Πόρτες • Πλακωτό • Φεύγα — Αυθεντικό Ελληνικό Τάβλι",
+      lblIdentityHeader: "Εισάγετε το όνομά σας / Σύνδεση",
+      btnVerifyIdentity: "Σύνδεση / Επιβεβαίωση",
+      verifiedBadge: name => `✅ Συνδεδεμένος ως "${name}"`,
+      guestBadge: name => `👤 Επισκέπτης "${name}"`,
+      hubBtnHost: "Δημιουργία Παιχνιδιού με Φίλο",
+      hubBtnJoin: "Σύνδεση σε Παιχνίδι Φίλου",
+      hubBtnAi: "Παιχνίδι Εναντίον AI",
+      hubArtCaption: "100% Δίκαια Ζάρια CSPRNG • Online & AI",
+      titleHostModal: "🎲 Δημιουργία Παιχνιδιού με Φίλο",
+      titleJoinModal: "🤝 Σύνδεση σε Παιχνίδι Φίλου",
+      titleAiModal: "🤖 Παιχνίδι Εναντίον AI",
+      btnBack: "Πίσω",
+      menuReturnBtn: "🏠 Μενού",
+      namePlaceholder: "Εισάγετε το όνομά σας",
+      optGuestNoPin: "Επισκέπτης (Χωρίς PIN)",
+      optEnableStore: "Αποθήκευση (PIN)",
+      pinHintExisting: name => `Το όνομα "${name}" βρέθηκε! Εισάγετε το 4-ψήφιο PIN σας:`,
+      pinHintNew: name => `Νέο όνομα "${name}"! Επιλέξτε 4-ψήφιο PIN για εγγραφή:`,
+      pinHintDefault: "Εισάγετε 4-ψήφιο PIN για σύνδεση ή δημιουργία λογαριασμού",
+      pinPlaceholder: "4-ψήφιο PIN",
+      errRegisteredNeedsPin: "ΣΦΑΛΜΑ: ERR_PIN_REQUIRED — Αυτό το όνομα είναι κατοχυρωμένο. Ενεργοποιήστε την αποθήκευση και βάλτε το PIN σας.",
+      lblCheckerColor: "Χρώμα Πούλιων",
+      lblAiDiff: "Δυσκολία AI",
+      aiEasy: "Εύκολο",
+      aiMedium: "Μεσαίο",
+      aiHard: "Δύσκολο (Πιθανότητες)",
+      lblRoomCode: "Κωδικός Δωματίου (Σύνδεση / Επανασύνδεση)",
+      roomPlaceholder: "6-ΨΗΦΙΟΣ ΚΩΔΙΚΟΣ",
+      lblGameSel: "Επιλογή Παιχνιδιού",
+      modeFull: "Πλήρες Σετ (Και τα 3)",
+      modePortes: "Πόρτες",
+      modePlakoto: "Πλακωτό",
+      modeFevga: "Φεύγα",
+      lblNumGames: "Αριθμός Παιχνιδιών / Πόντων (1, 3, 5, 7)",
+      lblEndTurn: "Κουμπί «Τέλος Σειράς»",
+      optOn: "Ναι",
+      optOffAutoEnd: "Όχι (Αυτόματα)",
+      lblAutoRoll: "Αυτόματη Ρίψη Ζαριών",
+      optOffManual: "Όχι (Χειροκίνητα)",
+      optOnAutoRoll: "Ναι (Αυτόματα)",
+      btnStartGame: "Δημιουργία Δωματίου",
+      btnJoinGame: "Σύνδεση / Επανασύνδεση",
+      btnStartAi: "Έναρξη με AI",
+      netDefault: "Online Παιχνίδι",
+      netAiMode: diff => `Λειτουργία: Εναντίον AI (${diff}) • Χωρίς Καταγραφή Στατιστικών`,
+      shareBtn: "Πρόσκληση",
+      soundOn: "Ήχος: ΝΑΙ",
+      soundOff: "Ήχος: ΟΧΙ",
+      bar: "ΜΠΑΡΑ",
+      off: "ΕΞΩ",
+      rollBtn: "Ρίξε Ζάρια",
+      undoBtn: "Αναίρεση",
+      endTurnBtn: "Τέλος Σειράς",
+      btnProfile: "Προφίλ",
+      btnLeaderboard: "Κατάταξη",
+      btnSettings: "Ρυθμίσεις",
+      btnAdmin: "Διαχείριση Βάσης (Sotiris)",
+      profTitle: "Προφίλ Παίκτη",
+      lbTitle: "Παγκόσμια Κατάταξη",
+      lbSyncing: "🔄 Συγχρονισμός με τον Server...",
+      lbSynced: "🌐 Ζωντανή Κατάταξη Server (Κρυπτογράφηση SHA-256)",
+      settingsTitle: "Ρυθμίσεις",
+      lblSettingsTheme: "Χρωματικό Θέμα Ταμπλό & UI (8 Θέματα)",
+      thClassic: "Κλασικό Ξύλο",
+      thBlue: "Μπλε Αιγαίου",
+      thGreen: "Σμαραγδί",
+      thWhite: "Λευκό Μάρμαρο",
+      thAmethyst: "Βασιλικός Αμέθυστος",
+      thTerracotta: "Τερακότα Ηλιοβασιλέματος",
+      thMidnight: "Μεσάνυχτα & Χρυσός",
+      thSakura: "Άνθη Κερασιάς",
+      closeBtn: "Πίσω / Κλείσιμο",
+      profGuestMsg: "Παίζετε ως Επισκέπτης. Ενεργοποιήστε την Αποθήκευση (PIN) στο αρχικό μενού για καταγραφή στατιστικών!",
+      profRank: "Θέση Κατάταξης",
+      profSets: "Σετ (Νίκες / Ήττες / Σύν.)",
+      profGames: "Παιχνίδια (Νίκες / Ήττες / Σύν.)",
+      profEditHeading: "Επεξεργασία Στοιχείων (Όνομα & Κρυπτογραφημένο PIN)",
+      profNewPinPh: "Νέο 4-ψήφιο PIN",
+      profSaveBtn: "Αποθήκευση",
+      profSavedMsg: "Τα στοιχεία ενημερώθηκαν στον Server!",
+      profVariantHeading: "Ποσοστά Νικών ανά Παιχνίδι (1 ανά Παρτίδα)",
+      profTopOppHeading: "Top 3 Αντίπαλοι (με βάση τα παιχνίδια)",
+      profNoOpp: "Δεν υπάρχουν καταγεγραμμένοι αντίπαλοι ακόμα.",
+      lbEmpty: "Δεν υπάρχουν εγγεγραμμένοι παίκτες στον Server ακόμα.",
+      colRank: "#",
+      colPlayer: "Παίκτης",
+      colSets: "Νίκες Σετ",
+      colGames: "Νίκες Παιχνιδιών",
+      colWinRate: "Ποσοστό Νικών",
+      colOpponent: "Αντίπαλος",
+      colOppGames: "Παιχνίδια (Ν / Η)",
+      colOppSetsWL: "Σετ (Νίκες / Ήττες)",
+      pageOf: (cur, tot) => `Σελίδα ${cur} από ${tot}`,
+      prevPage: "◀ Προηγ.",
+      nextPage: "Επόμ. ▶",
+      setWinHeadline: champ => `🎉 Ο/Η ${champ} Κέρδισε το Σετ!`,
+      setScoreSub: (sw, sb, target, gW, gB, totG) => `Σκορ Παρτίδας: ${sw} - ${sb} (Στόχος: ${target}) • Στατιστικά: 1 Σετ, ${gW}-${gB} σε ${totG} Παιχνίδια`,
+      setGamesHeading: "Παιχνίδια του Σετ",
+      colGameNum: "#",
+      colVariant: "Παιχνίδι",
+      colWinner: "Νικητής",
+      colPts: "Πόντοι / Στατ.",
+      setTopDiceHeading: "Πιο Συχνή Ζαριά",
+      noRollsRecorded: "Καμία ρίψη",
+      setPlayAgainPrompt: "Θέλετε να παίξετε ξανά με τον ίδιο αντίπαλο και τις ίδιες ρυθμίσεις ή έξοδο στο αρχικό μενού;",
+      btnPlayAgain: "🔄 Παίξτε Ξανά (Ίδιες Ρυθμίσεις)",
+      btnExitMenu: "🚪 Έξοδος στο Αρχικό Μενού",
+      waitingOpponentRematch: "Αναμονή επιβεβαίωσης από τον αντίπαλο...",
+      resignBtn: "🏳️ Παραίτηση",
+      resignTitle: "🏳️ Παραίτηση από το Παιχνίδι",
+      resignDesc: "Επιλέξτε αν παραδίδετε το παιχνίδι Μονό ή Διπλό:",
+      offerMoni: "Μονό (+1 πόντος)",
+      offerDiplo: "Διπλό (+2 πόντοι)",
+      cancelBtn: "Ακύρωση",
+      resignSent: pts => `Προτάθηκε παραίτηση (${pts === 2 ? "Διπλό +2" : "Μονό +1"}) — αναμονή απάντησης...`,
+      resignRespTitle: "🏳️ Πρόταση Παραίτησης",
+      resignRespDesc: (name, pts) => `Ο/Η ${name} προτείνει να παραδοθεί (${pts === 2 ? "Διπλό +2 πόντοι" : "Μονό +1 πόντος"}). Δέχεστε;`,
+      acceptResign: "✓ Αποδοχή Νίκης",
+      declineResign: "✕ Απόρριψη",
+      resignDeclined: name => `Ο/Η ${name} απέρριψε την παραίτηση. Το παιχνίδι συνεχίζεται!`,
+      resignAcceptedReason: (loser, winner, pts) => `Ο/Η ${loser} παραιτήθηκε (${pts === 2 ? "Διπλό +2" : "Μονό +1"})! Κερδίζει ο/η ${winner}.`,
+      statusInitRollOff: "Ρίξτε από 1 ζάρι για το ποιος παίζει πρώτος",
+      sysLabel: "Σύστημα",
+      welcomeMsg: " Καλωσήρθατε! Ρίξτε ένα ζάρι για το ποιος παίζει πρώτος.",
+      chatPlaceholder: "Γράψτε ένα μήνυμα...",
+      sendBtn: "Αποστολή",
+      variants: { PORTES: "ΠΟΡΤΕΣ", PLAKOTO: "ΠΛΑΚΩΤΟ", FEVGA: "ΦΕΥΓΑ" },
+      colors: {
+        white: "Λευκά", black: "Μαύρα", blue: "Μπλε", red: "Κόκκινα",
+        brown: "Καφέ", yellow: "Κίτρινα", green: "Πράσινα", purple: "Μωβ"
+      },
+      roll1DieTurn: p => `${p}: Ρίξτε 1 Ζάρι για Πρώτη Σειρά`,
+      toRoll: p => `${p}: Ρίξτε Ζάρια`,
+      tapEndTurn: p => `${p}: Πατήστε «Τέλος Σειράς»`,
+      moveCheckers: (p, n) => `${p}: Κινήστε Πούλια (${n} απομένουν)`,
+      rolled1DieWait: (wName, d, bName) => `Ο/Η ${wName} έφερε ${d}. Τώρα ρίχνει 1 ζάρι ο/η ${bName}!`,
+      rolled1DieYourTurn: (wName, d) => `Ο/Η ${wName} έφερε ${d}. Σειρά σας να ρίξετε 1 ζάρι!`,
+      rollOffTie: (r1, r2) => `Ισοπαλία (${r1} - ${r2})! Ρίξτε ξανά για το ποιος παίζει πρώτος.`,
+      rollOffWin: (wName, r1, bName, r2, winName) => `${wName}: ${r1} - ${bName}: ${r2} — Παίζει πρώτος ο/η ${winName}!`,
+      rollOffStart: (winName, auto) => `Ο/Η ${winName} κέρδισε το πρώτο ζάρι!${auto ? " Αυτόματη ρίψη..." : " Ρίξτε Ζάρια."}`,
+      rolledPair: (d1, d2, dbl) => `Ζαριά: ${d1} & ${d2}${dbl ? " (Διπλές - 4 κινήσεις!)" : ""}`,
+      noLegalMoves: p => `Καμία διαθέσιμη κίνηση για ${p} — αλλάζει η σειρά!`,
+      movesComplete: "Οι κινήσεις ολοκληρώθηκαν — πατήστε Τέλος Σειράς (ή Αναίρεση)",
+      moveUndone: "Η κίνηση αναιρέθηκε",
+      nextTurnStatus: (p, auto) => `Σειρά του/της ${p}${auto ? " (Αυτόματη ρίψη...)" : " να ρίξει"}`,
+      manaWin: "Πιάστηκε η Μάνα! +2 πόντοι (1 νίκη παιχνιδιού)",
+      gameWin: (p, pts, nextP) => `Ο/Η ${p} κερδίζει (${pts === 2 ? "Διπλό +2" : "Μονό +1"})! Παίζει πρώτος ο/η ${nextP}.`,
+      hostingWait: code => `Δωμάτιο: ${code} (Αναμονή φίλου...)`,
+      connectingTo: code => `Σύνδεση στο ${code}...`,
+      roomLocked: code => `Δωμάτιο ${code} Κλειδωμένο`,
+      enter6CodeAlert: "Παρακαλώ εισάγετε τον 6-ψήφιο κωδικό δωματίου.",
+      oppLeftBanner: (name, code) => `⚠️ Ο/Η ${name} αποσυνδέθηκε (Δωμάτιο ${code}) — Αναμονή επιστροφής:`,
+      oppLeftStatus: name => `Ο/Η ${name} αποσυνδέθηκε. Αναμονή 5 λεπτών για επανασύνδεση...`,
+      oppLeftChat: (name, code) => `Ο/Η ${name} αποσυνδέθηκε. Το παιχνίδι αποθηκεύτηκε! Έχει 5 λεπτά να επιστρέψει με τον κωδικό ${code}.`,
+      oppRejoinedChat: name => `✅ Ο/Η ${name} επανασυνδέθηκε! Το παιχνίδι συνεχίζεται κανονικά.`,
+      oppRejoinedStatus: name => `Ο/Η ${name} επανασυνδέθηκε! Το παιχνίδι συνεχίζεται.`,
+      forfeitTimeoutReason: (loser, winner) => `Ο/Η ${loser} δεν επέστρεψε εντός 5 λεπτών — Ο/Η ${winner} κερδίζει το σετ!`,
+      joinedTableChat: name => `Ο/Η ${name} συνδέθηκε στο τραπέζι.`,
+      isTyping: name => `Ο/Η ${name} πληκτρολογεί...`,
+      inviteCopied: "Ο σύνδεσμος πρόσκλησης αντιγράφηκε!",
+      defaultPlayer: "Παίκτης"
+    }
+  };
+
+  function t() {
+    return I18N[myLang] || I18N.en;
+  }
+
+  // --- 2. Checker Color Catalog, 8 Themes & Role-Based Setup Preferences ---
+  const CHECKER_COLORS = [
+    { id: "white",  chatHex: "#ffffff" },
+    { id: "black",  chatHex: "#b0bec5" },
+    { id: "blue",   chatHex: "#64b5f6" },
+    { id: "red",    chatHex: "#ff8a80" },
+    { id: "brown",  chatHex: "#d7ccc8" },
+    { id: "yellow", chatHex: "#ffd54f" },
+    { id: "green",  chatHex: "#81c784" },
+    { id: "purple", chatHex: "#ce93d8" }
+  ];
+
+  const ALLOWED_TARGETS = [1, 3, 5, 7];
+
+  let modalRole = "HOST"; // 'HOST' | 'JOIN' | 'AI'
+  let myChosenColor = "white";
+  let myStoreDetailsPref = true;
+  let isAuthenticatedAccount = false;
+  let mySessionPin = "";
+  let myEndTurnPref = true;
+  let myAutoRollPref = false;
+  let myTargetScorePref = 7;
+  let myGameModePref = "FULL";
+  let myAiDifficulty = "MEDIUM";
+  let isAiMatch = false;
+  let aiTurnTimer = null;
+  let pendingResignOffer = null;
+
+  let disconnectInterval = null;
+  let disconnectDeadline = 0;
+  let isWaitingForReconnect = false;
+
+  // Switches between the Standalone Landing Hub and the Active Gameplay Board (Works across all Mobile & Desktop widths)
+  function showScreen(screenName) {
+    const landing = document.getElementById("landingPage");
+    const gameApp = document.getElementById("gameAppLayout");
+    if (screenName === "GAME") {
+      landing.style.display = "none";
+      gameApp.classList.add("active-game");
+      document.body.classList.add("in-game-mode");
+      render();
+    } else {
+      gameApp.classList.remove("active-game");
+      document.body.classList.remove("in-game-mode");
+      landing.style.display = "flex";
+    }
+  }
+
+  function selectTheme(themeId) {
+    myTheme = ALL_THEMES.includes(themeId) ? themeId : "classic";
+    document.body.setAttribute("data-theme", myTheme);
+    localStorage.setItem("tavli_theme", myTheme);
+    ALL_THEMES.forEach(id => {
+      const el = document.getElementById("themeCard_" + id);
+      if (el) el.classList.toggle("active", id === myTheme);
+    });
+  }
+
+  function selectLangPref(lang) {
+    myLang = (lang === "el") ? "el" : "en";
+    localStorage.setItem("tavli_lang", myLang);
+    const sEN = document.getElementById("setLangEN");
+    const sEL = document.getElementById("setLangEL");
+    if (sEN) sEN.classList.toggle("active", myLang === "en");
+    if (sEL) sEL.classList.toggle("active", myLang === "el");
+    applyLanguageToUI();
+  }
+
+  function selectAiDifficulty(diff) {
+    myAiDifficulty = diff;
+    document.getElementById("aiEasy").classList.toggle("active", diff === "EASY");
+    document.getElementById("aiMedium").classList.toggle("active", diff === "MEDIUM");
+    document.getElementById("aiHard").classList.toggle("active", diff === "HARD");
+  }
+
+  function selectStoreDetailsPref(enable) {
+    myStoreDetailsPref = enable;
+    document.getElementById("optStoreYes").classList.toggle("active", enable);
+    document.getElementById("optStoreNo").classList.toggle("active", !enable);
+    document.getElementById("playerPinInput").style.display = enable ? "block" : "none";
+    document.getElementById("authErrorBox").style.display = "none";
+    handleNameInputCheck();
+  }
+
+  function handleNameInputCheck() {
+    const rawName = document.getElementById("playerNameInput").value.trim();
+    const hintEl = document.getElementById("pinPromptHint");
+    const errBox = document.getElementById("authErrorBox");
+    errBox.style.display = "none";
+    const tr = t();
+
+    if (!myStoreDetailsPref) {
+      hintEl.textContent = tr.guestBadge(rawName || tr.defaultPlayer);
+      hintEl.style.color = "#ffecb3";
+      return;
+    }
+
+    if (!rawName) {
+      hintEl.textContent = tr.pinHintDefault;
+      hintEl.style.color = "#ffecb3";
+      return;
+    }
+
+    if (window.TavliDB.userExists(rawName)) {
+      hintEl.textContent = tr.pinHintExisting(rawName);
+      hintEl.style.color = "#4fc3f7";
+    } else {
+      hintEl.textContent = tr.pinHintNew(rawName);
+      hintEl.style.color = "#81c784";
+    }
+  }
+
+  function showAuthError(msg) {
+    const errBox = document.getElementById("authErrorBox");
+    errBox.textContent = msg;
+    errBox.style.display = "block";
+  }
+
+  function updateAdminButtonVisibility() {
+    const isAdmin = isAuthenticatedAccount && window.TavliDB.isAdminName(myPlayerName);
+    const btn1 = document.getElementById("btnAdminPanel");
+    const btn2 = document.getElementById("btnLandingAdmin");
+    if (btn1) btn1.style.display = isAdmin ? "flex" : "none";
+    if (btn2) btn2.style.display = isAdmin ? "flex" : "none";
+  }
+
+  async function verifyIdentityOnLanding(showSuccessHint = false) {
+    ensureAudio();
+    const tr = t();
+    const rawName = document.getElementById("playerNameInput").value.trim() || tr.defaultPlayer;
+    const rawPin = document.getElementById("playerPinInput").value.trim();
+
+    if (myStoreDetailsPref) {
+      const auth = await window.TavliDB.authenticateOrCreateAsync(rawName, rawPin);
+      if (!auth.ok) {
+        showAuthError(auth.message);
+        return false;
+      }
+      myPlayerName = auth.user.name;
+      mySessionPin = rawPin;
+      isAuthenticatedAccount = true;
+      localStorage.setItem("tavli_store_enabled", "1");
+      if (showSuccessHint) {
+        const hintEl = document.getElementById("pinPromptHint");
+        hintEl.textContent = tr.verifiedBadge(myPlayerName);
+        hintEl.style.color = "#00e676";
+      }
+    } else {
+      await window.TavliDB.pullFromServer();
+      if (window.TavliDB.userExists(rawName)) {
+        showAuthError(tr.errRegisteredNeedsPin);
+        return false;
+      }
+      myPlayerName = rawName;
+      mySessionPin = "";
+      isAuthenticatedAccount = false;
+      localStorage.setItem("tavli_store_enabled", "0");
+      if (showSuccessHint) {
+        const hintEl = document.getElementById("pinPromptHint");
+        hintEl.textContent = tr.guestBadge(myPlayerName);
+        hintEl.style.color = "#00e676";
+      }
+    }
+
+    localStorage.setItem("tavli_player_name", myPlayerName);
+    document.getElementById("authErrorBox").style.display = "none";
+    updateAdminButtonVisibility();
+    updateHeaderLabels();
+    return true;
+  }
+
+  async function openPlaySetupModal(role) {
+    const ok = await verifyIdentityOnLanding(false);
+    if (!ok) return;
+
+    modalRole = role;
+    const tr = t();
+
+    if (role === "HOST") {
+      document.getElementById("playConfigTitle").textContent = tr.titleHostModal;
+      document.getElementById("modalSubmitBtn").textContent = tr.btnStartGame;
+    } else if (role === "JOIN") {
+      document.getElementById("playConfigTitle").textContent = tr.titleJoinModal;
+      document.getElementById("modalSubmitBtn").textContent = tr.btnJoinGame;
+    } else {
+      document.getElementById("playConfigTitle").textContent = tr.titleAiModal;
+      document.getElementById("modalSubmitBtn").textContent = tr.btnStartAi;
+    }
+
+    document.getElementById("hostOnlySettings").style.display = (role === "HOST" || role === "AI") ? "block" : "none";
+    document.getElementById("joinOnlySettings").style.display = role === "JOIN" ? "block" : "none";
+    document.getElementById("aiOnlySettings").style.display = role === "AI" ? "block" : "none";
+
+    renderColorPicker();
+    renderTargetScorePicker();
+    document.getElementById("playConfigModal").style.display = "flex";
+  }
+
+  function closePlayConfigModal() {
+    document.getElementById("playConfigModal").style.display = "none";
+  }
+
+  async function confirmStartSelectedMode() {
+    ensureAudio();
+    const tr = t();
+    localStorage.setItem("tavli_player_color", myChosenColor);
+
+    if (modalRole === "JOIN") {
+      const joinCode = (pendingRoomFromUrl || document.getElementById("modalRoomInput").value || "").trim().toUpperCase();
+      if (joinCode.length !== 6) {
+        alert(tr.enter6CodeAlert);
+        return;
+      }
+      pendingRoomFromUrl = null;
+      closePlayConfigModal();
+      showScreen("GAME");
+      joinRoomWithCode(joinCode);
+      return;
+    }
+
+    localStorage.setItem("tavli_end_turn_pref", myEndTurnPref ? "1" : "0");
+    localStorage.setItem("tavli_auto_roll_pref", myAutoRollPref ? "1" : "0");
+    localStorage.setItem("tavli_target_score", String(myTargetScorePref));
+    localStorage.setItem("tavli_game_mode", myGameModePref);
+
+    closePlayConfigModal();
+    showScreen("GAME");
+
+    if (modalRole === "HOST") {
+      hostRoom();
+    } else if (modalRole === "AI") {
+      isAiMatch = true;
+      myRole = "W";
+      playerNames.W = myPlayerName;
+      playerNames.B = `AI (${myAiDifficulty})`;
+      state.colors.W = myChosenColor;
+      state.colors.B = getDistinctFallbackColor(state.colors.W);
+      state.requireEndTurn = myEndTurnPref;
+      state.autoRoll = myAutoRollPref;
+      state.targetScore = myTargetScorePref;
+      state.variantSequence = getSequenceForMode(myGameModePref);
+      state.variantIdx = 0;
+      state.scoreW = 0;
+      state.scoreB = 0;
+      resetSetTracking();
+      document.getElementById("shareBtn").style.display = "none";
+      document.getElementById("netStatus").textContent = tr.netAiMode(myAiDifficulty);
+      initGame("ROLL_OFF");
+    }
+  }
+
+  function applyLanguageToUI() {
+    const tr = t();
+    document.documentElement.lang = myLang;
+    document.getElementById("landingMainTitle").textContent = tr.landingMainTitle;
+    document.getElementById("landingSubTitle").textContent = tr.landingSubTitle;
+    document.getElementById("lblIdentityHeader").textContent = tr.lblIdentityHeader;
+    document.getElementById("btnVerifyIdentity").textContent = tr.btnVerifyIdentity;
+    document.getElementById("hubBtnHost").textContent = tr.hubBtnHost;
+    document.getElementById("hubBtnJoin").textContent = tr.hubBtnJoin;
+    document.getElementById("hubBtnAi").textContent = tr.hubBtnAi;
+    document.getElementById("hubBtnProfile").textContent = tr.btnProfile;
+    document.getElementById("hubBtnLeaderboard").textContent = tr.btnLeaderboard;
+    document.getElementById("hubBtnSettings").textContent = tr.btnSettings;
+    document.getElementById("lblLandingAdmin").textContent = tr.btnAdmin;
+    document.getElementById("hubArtCaption").textContent = tr.hubArtCaption;
+    document.getElementById("btnConfigBack").textContent = tr.btnBack;
+    document.getElementById("menuReturnBtn").textContent = tr.menuReturnBtn;
+
+    document.getElementById("playerNameInput").placeholder = tr.namePlaceholder;
+    document.getElementById("optStoreNo").textContent = tr.optGuestNoPin;
+    document.getElementById("optStoreYes").textContent = tr.optEnableStore;
+    document.getElementById("playerPinInput").placeholder = tr.pinPlaceholder;
+    document.getElementById("lblCheckerColor").textContent = tr.lblCheckerColor;
+    document.getElementById("lblAiDiff").textContent = tr.lblAiDiff;
+    document.getElementById("aiEasy").textContent = tr.aiEasy;
+    document.getElementById("aiMedium").textContent = tr.aiMedium;
+    document.getElementById("aiHard").textContent = tr.aiHard;
+    document.getElementById("lblRoomCode").textContent = tr.lblRoomCode;
+    document.getElementById("modalRoomInput").placeholder = tr.roomPlaceholder;
+    document.getElementById("lblGameSel").textContent = tr.lblGameSel;
+    document.getElementById("modeFull").textContent = tr.modeFull;
+    document.getElementById("modePortes").textContent = tr.modePortes;
+    document.getElementById("modePlakoto").textContent = tr.modePlakoto;
+    document.getElementById("modeFevga").textContent = tr.modeFevga;
+    document.getElementById("lblNumGames").textContent = tr.lblNumGames;
+    document.getElementById("lblEndTurn").textContent = tr.lblEndTurn;
+    document.getElementById("optEndTurnYes").textContent = tr.optOn;
+    document.getElementById("optEndTurnNo").textContent = tr.optOffAutoEnd;
+    document.getElementById("lblAutoRoll").textContent = tr.lblAutoRoll;
+    document.getElementById("optAutoRollNo").textContent = tr.optOffManual;
+    document.getElementById("optAutoRollYes").textContent = tr.optOnAutoRoll;
+
+    if (isAiMatch) {
+      document.getElementById("netStatus").textContent = tr.netAiMode(myAiDifficulty);
+    } else if (!activeRoomCode) {
+      document.getElementById("netStatus").textContent = tr.netDefault;
+    }
+    document.getElementById("shareBtn").textContent = tr.shareBtn;
+    document.getElementById("muteBtn").textContent = soundEnabled ? tr.soundOn : tr.soundOff;
+
+    document.getElementById("lblBar").textContent = tr.bar;
+    document.getElementById("lblOff").textContent = tr.off;
+    document.getElementById("rollBtn").textContent = tr.rollBtn;
+    document.getElementById("undoBtn").textContent = tr.undoBtn;
+    document.getElementById("endTurnBtn").textContent = tr.endTurnBtn;
+    document.getElementById("resignBtn").textContent = tr.resignBtn;
+
+    document.getElementById("resignModalTitle").textContent = tr.resignTitle;
+    document.getElementById("resignModalDesc").textContent = tr.resignDesc;
+    document.getElementById("btnOfferMoni").textContent = tr.offerMoni;
+    document.getElementById("btnOfferDiplo").textContent = tr.offerDiplo;
+    document.getElementById("btnCancelResign").textContent = tr.cancelBtn;
+    document.getElementById("resignRespTitle").textContent = tr.resignRespTitle;
+    document.getElementById("btnAcceptResign").textContent = tr.acceptResign;
+    document.getElementById("btnDeclineResign").textContent = tr.declineResign;
+
+    document.getElementById("lblBtnProfile").textContent = tr.btnProfile;
+    document.getElementById("lblBtnLeaderboard").textContent = tr.btnLeaderboard;
+    document.getElementById("lblBtnSettings").textContent = tr.btnSettings;
+    document.getElementById("lblBtnAdmin").textContent = tr.btnAdmin;
+    document.getElementById("profModalTitle").textContent = tr.profTitle;
+    document.getElementById("lbModalTitle").textContent = tr.lbTitle;
+    document.getElementById("settingsModalTitle").textContent = tr.settingsTitle;
+    document.getElementById("lblSettingsTheme").textContent = tr.lblSettingsTheme;
+    document.getElementById("thNameClassic").textContent = tr.thClassic;
+    document.getElementById("thNameBlue").textContent = tr.thBlue;
+    document.getElementById("thNameGreen").textContent = tr.thGreen;
+    document.getElementById("thNameWhite").textContent = tr.thWhite;
+    document.getElementById("thNameAmethyst").textContent = tr.thAmethyst;
+    document.getElementById("thNameTerracotta").textContent = tr.thTerracotta;
+    document.getElementById("thNameMidnight").textContent = tr.thMidnight;
+    document.getElementById("thNameSakura").textContent = tr.thSakura;
+    document.getElementById("profCloseBtn").textContent = tr.closeBtn;
+    document.getElementById("lbCloseBtn").textContent = tr.closeBtn;
+    document.getElementById("settingsCloseBtn").textContent = tr.closeBtn;
+
+    const wSender = document.getElementById("welcomeSender");
+    const wMsg = document.getElementById("welcomeMsg");
+    if (wSender) wSender.textContent = `${tr.sysLabel}:`;
+    if (wMsg) wMsg.textContent = tr.welcomeMsg;
+
+    document.getElementById("chatInput").placeholder = tr.chatPlaceholder;
+    document.getElementById("sendChatBtn").textContent = tr.sendBtn;
+
+    handleNameInputCheck();
+    renderColorPicker();
+    updateHeaderLabels();
+    render();
+  }
+
+  function renderColorPicker() {
+    const grid = document.getElementById("colorGrid");
+    grid.innerHTML = "";
+    const tr = t();
+    CHECKER_COLORS.forEach(c => {
+      const opt = document.createElement("div");
+      opt.className = "color-option" + (c.id === myChosenColor ? " active" : "");
+      opt.onclick = () => {
+        myChosenColor = c.id;
+        renderColorPicker();
+      };
+      const swatch = document.createElement("div");
+      swatch.className = `swatch-circle clr-${c.id}`;
+      const lbl = document.createElement("span");
+      lbl.textContent = tr.colors[c.id] || c.id;
+      opt.appendChild(swatch);
+      opt.appendChild(lbl);
+      grid.appendChild(opt);
+    });
+  }
+
+  function renderTargetScorePicker() {
+    const row = document.getElementById("targetScoreRow");
+    row.innerHTML = "";
+    ALLOWED_TARGETS.forEach(n => {
+      const btn = document.createElement("div");
+      btn.className = "num-opt" + (n === myTargetScorePref ? " active" : "");
+      btn.textContent = n;
+      btn.onclick = () => {
+        myTargetScorePref = n;
+        renderTargetScorePicker();
+      };
+      row.appendChild(btn);
+    });
+  }
+
+  function selectGameMode(mode) {
+    myGameModePref = mode;
+    document.getElementById("modeFull").classList.toggle("active", mode === "FULL");
+    document.getElementById("modePortes").classList.toggle("active", mode === "PORTES");
+    document.getElementById("modePlakoto").classList.toggle("active", mode === "PLAKOTO");
+    document.getElementById("modeFevga").classList.toggle("active", mode === "FEVGA");
+  }
+
+  function selectEndTurnPref(useBtn) {
+    myEndTurnPref = useBtn;
+    document.getElementById("optEndTurnYes").classList.toggle("active", useBtn);
+    document.getElementById("optEndTurnNo").classList.toggle("active", !useBtn);
+  }
+
+  function selectAutoRollPref(autoRoll) {
+    myAutoRollPref = autoRoll;
+    document.getElementById("optAutoRollYes").classList.toggle("active", autoRoll);
+    document.getElementById("optAutoRollNo").classList.toggle("active", !autoRoll);
+  }
+
+  function getDistinctFallbackColor(takenId) {
+    const preferred = ["black", "white", "red", "blue", "yellow", "green", "purple", "brown"];
+    return preferred.find(id => id !== takenId) || "black";
+  }
+
+  function getColorMeta(colorId) {
+    const base = CHECKER_COLORS.find(c => c.id === colorId) || CHECKER_COLORS[0];
+    return {
+      id: base.id,
+      chatHex: base.chatHex,
+      label: t().colors[base.id] || base.id
+    };
+  }
+
+  function getSequenceForMode(mode) {
+    if (mode === "PORTES") return ["PORTES"];
+    if (mode === "PLAKOTO") return ["PLAKOTO"];
+    if (mode === "FEVGA") return ["FEVGA"];
+    return ["PORTES", "PLAKOTO", "FEVGA"];
+  }
+
+  // --- 3. Profile, Paginated Global Leaderboard, Settings & Sotiris Admin Modals ---
+  async function openProfileModal() {
+    await verifyIdentityOnLanding(false);
+    renderProfileModalContent();
+    document.getElementById("profileModal").style.display = "flex";
+    await window.TavliDB.pullFromServer();
+    renderProfileModalContent();
+  }
+  function closeProfileModal() {
+    document.getElementById("profileModal").style.display = "none";
+  }
+
+  async function openSettingsModal() {
+    await verifyIdentityOnLanding(false);
+    renderSettingsAccountSection();
+    document.getElementById("settingsModal").style.display = "flex";
+  }
+  function closeSettingsModal() {
+    document.getElementById("settingsModal").style.display = "none";
+  }
+
+  function renderProfileModalContent() {
+    const container = document.getElementById("profileContent");
+    const tr = t();
+    const user = window.TavliDB.getUser(myPlayerName);
+
+    if (!user || !isAuthenticatedAccount) {
+      container.innerHTML = `
+        <div class="profile-name-header">👤 ${escapeHtml(myPlayerName)}</div>
+        <p style="font-size:0.85rem; color:#ffecb3; text-align:center; padding:12px;">${tr.profGuestMsg}</p>
+      `;
+      return;
+    }
+
+    const s = user.stats || {};
+    const setsW = s.setsWon || 0;
+    const setsL = s.setsLost || 0;
+    const setsTot = setsW + setsL;
+
+    const gamesW = s.gamesWon || 0;
+    const gamesL = s.gamesLost || 0;
+    const gamesTot = gamesW + gamesL;
+
+    const rankInfo = window.TavliDB.getPlayerRank(myPlayerName);
+    const rankStr = rankInfo ? `#${rankInfo.rank} / ${rankInfo.total}` : "-";
+
+    const calcRate = (won, played) => played > 0 ? `${Math.round((won / played) * 100)}% (${won}/${played})` : `0% (0/0)`;
+    const vPortes = (s.variants && s.variants.PORTES) || { played: 0, won: 0 };
+    const vPlakoto = (s.variants && s.variants.PLAKOTO) || { played: 0, won: 0 };
+    const vFevga = (s.variants && s.variants.FEVGA) || { played: 0, won: 0 };
+
+    const topOpps = window.TavliDB.getTopOpponents(myPlayerName, 3);
+    let oppRowsHtml = "";
+    if (topOpps.length === 0) {
+      oppRowsHtml = `<tr><td colspan="3" style="text-align:center; color:#90a4ae;">${tr.profNoOpp}</td></tr>`;
+    } else {
+      topOpps.forEach(o => {
+        oppRowsHtml += `
+          <tr>
+            <td><strong>${escapeHtml(o.displayName)}</strong></td>
+            <td><span style="color:#00e676;font-weight:bold;">${o.gamesWon}W</span> / <span style="color:#ff8a80;font-weight:bold;">${o.gamesLost}L</span> (${o.gamesPlayed})</td>
+            <td><span style="color:#00e676;font-weight:bold;">${o.setsWon}W</span> / <span style="color:#ff8a80;font-weight:bold;">${o.setsLost}L</span> (${o.setsPlayed})</td>
+          </tr>
+        `;
+      });
+    }
+
+    container.innerHTML = `
+      <div class="profile-name-header">👤 ${escapeHtml(user.name)}</div>
+
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="val">${rankStr}</div>
+          <div class="lbl">${tr.profRank}</div>
+        </div>
+        <div class="stat-box">
+          <div class="val" style="font-size:0.98rem;"><span style="color:#00e676;">${setsW}W</span> / <span style="color:#ff8a80;">${setsL}L</span> (${setsTot})</div>
+          <div class="lbl">${tr.profSets}</div>
+        </div>
+        <div class="stat-box">
+          <div class="val" style="font-size:0.98rem;"><span style="color:#00e676;">${gamesW}W</span> / <span style="color:#ff8a80;">${gamesL}L</span> (${gamesTot})</div>
+          <div class="lbl">${tr.profGames}</div>
+        </div>
+      </div>
+
+      <div class="sub-heading">${tr.profVariantHeading}</div>
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="val" style="font-size:0.95rem;">${calcRate(vPortes.won, vPortes.played)}</div>
+          <div class="lbl">${tr.variants.PORTES}</div>
+        </div>
+        <div class="stat-box">
+          <div class="val" style="font-size:0.95rem;">${calcRate(vPlakoto.won, vPlakoto.played)}</div>
+          <div class="lbl">${tr.variants.PLAKOTO}</div>
+        </div>
+        <div class="stat-box">
+          <div class="val" style="font-size:0.95rem;">${calcRate(vFevga.won, vFevga.played)}</div>
+          <div class="lbl">${tr.variants.FEVGA}</div>
+        </div>
+      </div>
+
+      <div class="sub-heading">${tr.profTopOppHeading}</div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>${tr.colOpponent}</th>
+            <th>${tr.colOppGames}</th>
+            <th>${tr.colOppSetsWL}</th>
+          </tr>
+        </thead>
+        <tbody>${oppRowsHtml}</tbody>
+      </table>
+    `;
+  }
+
+  function renderSettingsAccountSection(feedbackMsg = "") {
+    const container = document.getElementById("settingsAccountSection");
+    if (!container) return;
+    const tr = t();
+    const user = window.TavliDB.getUser(myPlayerName);
+
+    if (!user || !isAuthenticatedAccount) {
+      container.innerHTML = `
+        <div class="sub-heading">${tr.profEditHeading}</div>
+        <p style="font-size:0.78rem; color:#ffecb3; padding:6px 0;">${tr.profGuestMsg}</p>
+      `;
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="sub-heading">${tr.profEditHeading}</div>
+      <div class="edit-row">
+        <input type="text" id="profEditName" value="${escapeHtml(user.name)}" maxlength="16" placeholder="Name" />
+        <input type="password" id="profEditPin" value="" maxlength="4" inputmode="numeric" placeholder="${tr.profNewPinPh}" />
+        <button class="btn-sm" style="padding:9px 14px;" onclick="saveProfileEdits()">${tr.profSaveBtn}</button>
+      </div>
+      ${feedbackMsg ? `<div style="margin-top:6px; font-size:0.78rem; color:#00e676; font-weight:bold;">${escapeHtml(feedbackMsg)}</div>` : ""}
+    `;
+  }
+
+  async function saveProfileEdits() {
+    const newName = document.getElementById("profEditName").value.trim();
+    const newPin = document.getElementById("profEditPin").value.trim();
+    const res = await window.TavliDB.updateCredentialsAsync(myPlayerName, newName, newPin, mySessionPin);
+    if (!res.ok) {
+      alert(res.message);
+      return;
+    }
+
+    if (newPin) mySessionPin = newPin;
+    const oldName = myPlayerName;
+    myPlayerName = res.user.name;
+    document.getElementById("playerNameInput").value = myPlayerName;
+    localStorage.setItem("tavli_player_name", myPlayerName);
+
+    if (myRole === "B") {
+      playerNames.B = myPlayerName;
+    } else {
+      playerNames.W = myPlayerName;
+      if (playerNames.B === oldName) playerNames.B = myPlayerName;
+    }
+    updateAdminButtonVisibility();
+    updateHeaderLabels();
+    render();
+    syncDatabaseWithPeer();
+    renderSettingsAccountSection(t().profSavedMsg);
+  }
+
+  async function openLeaderboardModal() {
+    const tr = t();
+    lbCurrentPage = 1;
+    document.getElementById("lbSyncStatus").textContent = tr.lbSyncing;
+    renderLeaderboardModalContent();
+    document.getElementById("leaderboardModal").style.display = "flex";
+
+    await window.TavliDB.pullFromServer();
+    document.getElementById("lbSyncStatus").textContent = tr.lbSynced;
+    renderLeaderboardModalContent();
+  }
+  function closeLeaderboardModal() {
+    document.getElementById("leaderboardModal").style.display = "none";
+  }
+
+  function changeLeaderboardPage(delta) {
+    lbCurrentPage += delta;
+    renderLeaderboardModalContent();
+  }
+
+  function renderLeaderboardModalContent() {
+    const container = document.getElementById("leaderboardContent");
+    const tr = t();
+    const list = window.TavliDB.getLeaderboard();
+
+    if (list.length === 0) {
+      container.innerHTML = `<p style="font-size:0.85rem; color:#90a4ae; text-align:center; padding:12px;">${tr.lbEmpty}</p>`;
+      return;
+    }
+
+    const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+    if (lbCurrentPage > totalPages) lbCurrentPage = totalPages;
+    if (lbCurrentPage < 1) lbCurrentPage = 1;
+
+    const startIdx = (lbCurrentPage - 1) * PAGE_SIZE;
+    const pageItems = list.slice(startIdx, startIdx + PAGE_SIZE);
+
+    let rowsHtml = "";
+    pageItems.forEach(item => {
+      const isMe = window.TavliDB.normalizeKey(item.name) === window.TavliDB.normalizeKey(myPlayerName);
+      const rowStyle = isMe ? "background:rgba(255,179,0,0.16); font-weight:bold;" : "";
+      rowsHtml += `
+        <tr style="${rowStyle}">
+          <td>#${item.rank}</td>
+          <td>${escapeHtml(item.name)}</td>
+          <td>${item.setsWon} / ${item.setsPlayed}</td>
+          <td>${item.gamesWon} / ${item.gamesPlayed}</td>
+          <td style="color:var(--accent); font-weight:bold;">${Math.round(item.overallWinRate)}%</td>
+        </tr>
+      `;
+    });
+
+    const pagerHtml = totalPages > 1 ? `
+      <div class="pagination-bar">
+        <button onclick="changeLeaderboardPage(-1)" ${lbCurrentPage <= 1 ? "disabled" : ""}>${tr.prevPage}</button>
+        <span>${tr.pageOf(lbCurrentPage, totalPages)}</span>
+        <button onclick="changeLeaderboardPage(1)" ${lbCurrentPage >= totalPages ? "disabled" : ""}>${tr.nextPage}</button>
+      </div>
+    ` : "";
+
+    container.innerHTML = `
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>${tr.colRank}</th>
+            <th>${tr.colPlayer}</th>
+            <th>${tr.colSets}</th>
+            <th>${tr.colGames}</th>
+            <th>${tr.colWinRate}</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+      ${pagerHtml}
+    `;
+  }
+
+  // --- Sotiris Admin Database Manager ---
+  async function openAdminModal() {
+    if (!isAuthenticatedAccount || !window.TavliDB.isAdminName(myPlayerName)) return;
+    adminCurrentPage = 1;
+    document.getElementById("adminOpponentsEditor").style.display = "none";
+    document.getElementById("adminFeedback").textContent = "Syncing with server...";
+    document.getElementById("adminCloudUrlInput").value = window.TavliDB.getCloudUrl();
+    renderAdminTable();
+    document.getElementById("adminModal").style.display = "flex";
+    await window.TavliDB.pullFromServer();
+    document.getElementById("adminFeedback").textContent = "🌐 Server database synced (PINs SHA-256 hashed).";
+    renderAdminTable();
+  }
+  function closeAdminModal() {
+    document.getElementById("adminModal").style.display = "none";
+  }
+
+  function changeAdminPage(delta) {
+    adminCurrentPage += delta;
+    renderAdminTable();
+  }
+
+  async function adminSaveCloudUrl() {
+    const newUrl = document.getElementById("adminCloudUrlInput").value.trim();
+    const fb = document.getElementById("adminFeedback");
+    fb.style.color = "#ffb300";
+    fb.textContent = "Connecting to server endpoint...";
+    const ok = await window.TavliDB.setCloudUrl(newUrl);
+    await window.TavliDB.pushToServer();
+    fb.style.color = "#00e676";
+    fb.textContent = ok
+      ? "Connected & synced with Cloud Server URL!"
+      : "Saved URL and pushed current database to endpoint!";
+    renderAdminTable();
+  }
+
+  function renderAdminTable() {
+    const container = document.getElementById("adminTableContainer");
+    const users = window.TavliDB.getAllUsers();
+    const tr = t();
+    if (users.length === 0) {
+      container.innerHTML = `<p style="padding:10px; color:#bcaaa4;">No users in database.</p>`;
+      return;
+    }
+
+    const totalPages = Math.max(1, Math.ceil(users.length / PAGE_SIZE));
+    if (adminCurrentPage > totalPages) adminCurrentPage = totalPages;
+    if (adminCurrentPage < 1) adminCurrentPage = 1;
+
+    const startIdx = (adminCurrentPage - 1) * PAGE_SIZE;
+    const pageUsers = users.slice(startIdx, startIdx + PAGE_SIZE);
+
+    let rows = "";
+    pageUsers.forEach((u, pageOffset) => {
+      const idx = startIdx + pageOffset;
+      const k = window.TavliDB.normalizeKey(u.name);
+      const s = u.stats || {};
+      const vP = (s.variants && s.variants.PORTES) || { won: 0, played: 0 };
+      const vPl = (s.variants && s.variants.PLAKOTO) || { won: 0, played: 0 };
+      const vF = (s.variants && s.variants.FEVGA) || { won: 0, played: 0 };
+
+      rows += `
+        <tr>
+          <td><input type="text" class="admin-input" id="adm_name_${idx}" value="${escapeHtml(u.name)}" /></td>
+          <td><input type="password" class="admin-input" id="adm_pin_${idx}" value="" placeholder="🔒 Hashed" maxlength="4" title="Protected by SHA-256. Enter 4 digits to reset PIN, or leave blank." /></td>
+          <td><input type="number" class="admin-input" id="adm_sw_${idx}" value="${s.setsWon || 0}" min="0" /></td>
+          <td><input type="number" class="admin-input" id="adm_sl_${idx}" value="${s.setsLost || 0}" min="0" /></td>
+          <td><input type="number" class="admin-input" id="adm_gw_${idx}" value="${s.gamesWon || 0}" min="0" /></td>
+          <td><input type="number" class="admin-input" id="adm_gl_${idx}" value="${s.gamesLost || 0}" min="0" /></td>
+          <td>
+            <div style="display:flex; gap:2px; align-items:center;">
+              <input type="number" class="admin-input" id="adm_pw_${idx}" value="${vP.won || 0}" min="0" title="Portes Won" />/
+              <input type="number" class="admin-input" id="adm_pp_${idx}" value="${vP.played || 0}" min="0" title="Portes Played" />
+            </div>
+          </td>
+          <td>
+            <div style="display:flex; gap:2px; align-items:center;">
+              <input type="number" class="admin-input" id="adm_plw_${idx}" value="${vPl.won || 0}" min="0" title="Plakoto Won" />/
+              <input type="number" class="admin-input" id="adm_plp_${idx}" value="${vPl.played || 0}" min="0" title="Plakoto Played" />
+            </div>
+          </td>
+          <td>
+            <div style="display:flex; gap:2px; align-items:center;">
+              <input type="number" class="admin-input" id="adm_fw_${idx}" value="${vF.won || 0}" min="0" title="Fevga Won" />/
+              <input type="number" class="admin-input" id="adm_fp_${idx}" value="${vF.played || 0}" min="0" title="Fevga Played" />
+            </div>
+          </td>
+          <td style="white-space:nowrap;">
+            <button class="btn-sm" style="padding:4px 6px; margin-right:2px;" onclick="adminSaveRow('${escapeHtml(k)}', ${idx})">Save</button>
+            <button class="btn-sm" style="padding:4px 6px; background:#4fc3f7; margin-right:2px;" onclick="adminOpenOpponentsEditor('${escapeHtml(k)}')">Opponents</button>
+            <button class="btn-sm" style="padding:4px 6px; background:#e53935; color:#fff;" onclick="adminDeleteRow('${escapeHtml(k)}')">Del</button>
+          </td>
+        </tr>
+      `;
+    });
+
+    const pagerHtml = totalPages > 1 ? `
+      <div class="pagination-bar">
+        <button onclick="changeAdminPage(-1)" ${adminCurrentPage <= 1 ? "disabled" : ""}>${tr.prevPage}</button>
+        <span>${tr.pageOf(adminCurrentPage, totalPages)}</span>
+        <button onclick="changeAdminPage(1)" ${adminCurrentPage >= totalPages ? "disabled" : ""}>${tr.nextPage}</button>
+      </div>
+    ` : "";
+
+    container.innerHTML = `
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th style="width:78px;">New PIN</th>
+            <th>Sets W</th>
+            <th>Sets L</th>
+            <th>Games W</th>
+            <th>Games L</th>
+            <th>Portes W/P</th>
+            <th>Plakoto W/P</th>
+            <th>Fevga W/P</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      ${pagerHtml}
+    `;
+  }
+
+  function adminOpenOpponentsEditor(userKey) {
+    const box = document.getElementById("adminOpponentsEditor");
+    const u = window.TavliDB.getUser(userKey);
+    if (!u) return;
+    const opps = (u.stats && u.stats.opponents) ? Object.entries(u.stats.opponents) : [];
+
+    let rowsHtml = "";
+    if (opps.length === 0) {
+      rowsHtml = `<tr><td colspan="6" style="text-align:center; color:#90a4ae;">No opponents recorded for ${escapeHtml(u.name)}.</td></tr>`;
+    } else {
+      opps.forEach(([oppKey, o], i) => {
+        rowsHtml += `
+          <tr>
+            <td><strong>${escapeHtml(o.displayName || oppKey)}</strong></td>
+            <td><input type="number" class="admin-input" id="adm_opp_gw_${i}" value="${o.gamesWon || 0}" min="0" /></td>
+            <td><input type="number" class="admin-input" id="adm_opp_gl_${i}" value="${o.gamesLost || 0}" min="0" /></td>
+            <td><input type="number" class="admin-input" id="adm_opp_sw_${i}" value="${o.setsWon || 0}" min="0" /></td>
+            <td><input type="number" class="admin-input" id="adm_opp_sl_${i}" value="${o.setsLost || 0}" min="0" /></td>
+            <td style="white-space:nowrap;">
+              <button class="btn-sm" style="padding:3px 6px;" onclick="adminSaveSingleOpponent('${escapeHtml(userKey)}', '${escapeHtml(oppKey)}', ${i})">Save</button>
+              <button class="btn-sm" style="padding:3px 6px; background:#e53935; color:#fff;" onclick="adminDeleteSingleOpponent('${escapeHtml(userKey)}', '${escapeHtml(oppKey)}')">Del</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    box.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <strong style="color:var(--accent); font-size:0.82rem;">Head-to-Head Opponents for ${escapeHtml(u.name)}</strong>
+        <button class="btn-sm" style="background:#546e7a; color:#fff; padding:3px 8px;" onclick="document.getElementById('adminOpponentsEditor').style.display='none'">Close</button>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Opponent</th>
+            <th>Games W</th>
+            <th>Games L</th>
+            <th>Sets W</th>
+            <th>Sets L</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    `;
+    box.style.display = "block";
+  }
+
+  function adminSaveSingleOpponent(userKey, oppKey, i) {
+    const fields = {
+      gamesWon: document.getElementById(`adm_opp_gw_${i}`).value,
+      gamesLost: document.getElementById(`adm_opp_gl_${i}`).value,
+      setsWon: document.getElementById(`adm_opp_sw_${i}`).value,
+      setsLost: document.getElementById(`adm_opp_sl_${i}`).value
+    };
+    window.TavliDB.adminSaveOpponentRecord(userKey, oppKey, fields);
+    document.getElementById("adminFeedback").style.color = "#00e676";
+    document.getElementById("adminFeedback").textContent = `Updated opponent "${oppKey}" for "${userKey}"!`;
+    syncDatabaseWithPeer();
+    adminOpenOpponentsEditor(userKey);
+  }
+
+  function adminDeleteSingleOpponent(userKey, oppKey) {
+    window.TavliDB.adminDeleteOpponentRecord(userKey, oppKey);
+    syncDatabaseWithPeer();
+    adminOpenOpponentsEditor(userKey);
+  }
+
+  async function adminSaveRow(originalKey, idx) {
+    const sw = parseInt(document.getElementById(`adm_sw_${idx}`).value, 10) || 0;
+    const sl = parseInt(document.getElementById(`adm_sl_${idx}`).value, 10) || 0;
+    const gw = parseInt(document.getElementById(`adm_gw_${idx}`).value, 10) || 0;
+    const gl = parseInt(document.getElementById(`adm_gl_${idx}`).value, 10) || 0;
+
+    const fields = {
+      name: document.getElementById(`adm_name_${idx}`).value,
+      newPin: document.getElementById(`adm_pin_${idx}`).value,
+      setsWon: sw,
+      setsLost: sl,
+      setsPlayed: sw + sl,
+      gamesWon: gw,
+      gamesLost: gl,
+      gamesPlayed: gw + gl,
+      PORTES: {
+        won: document.getElementById(`adm_pw_${idx}`).value,
+        played: document.getElementById(`adm_pp_${idx}`).value
+      },
+      PLAKOTO: {
+        won: document.getElementById(`adm_plw_${idx}`).value,
+        played: document.getElementById(`adm_plp_${idx}`).value
+      },
+      FEVGA: {
+        won: document.getElementById(`adm_fw_${idx}`).value,
+        played: document.getElementById(`adm_fp_${idx}`).value
+      }
+    };
+
+    const res = await window.TavliDB.adminSaveUserRecordAsync(originalKey, fields);
+    const fb = document.getElementById("adminFeedback");
+    if (!res.ok) {
+      fb.style.color = "#ff8a80";
+      fb.textContent = res.message;
+      return;
+    }
+    fb.style.color = "#00e676";
+    fb.textContent = `Saved & synced "${res.user.name}" to Server!`;
+    syncDatabaseWithPeer();
+    renderAdminTable();
+  }
+
+  function adminDeleteRow(key) {
+    if (!confirm(`Delete user "${key}" from the server database?`)) return;
+    window.TavliDB.adminDeleteUser(key);
+    document.getElementById("adminFeedback").style.color = "#ffb300";
+    document.getElementById("adminFeedback").textContent = `Deleted "${key}" from Server.`;
+    renderAdminTable();
+  }
+
+  async function adminAddNewUser() {
+    const name = document.getElementById("adminNewName").value.trim();
+    const pin = document.getElementById("adminNewPin").value.trim();
+    const fb = document.getElementById("adminFeedback");
+    if (window.TavliDB.userExists(name)) {
+      fb.style.color = "#ff8a80";
+      fb.textContent = "User already exists in the table above.";
+      return;
+    }
+    const res = await window.TavliDB.authenticateOrCreateAsync(name, pin);
+    if (!res.ok) {
+      fb.style.color = "#ff8a80";
+      fb.textContent = res.message;
+      return;
+    }
+    document.getElementById("adminNewName").value = "";
+    document.getElementById("adminNewPin").value = "";
+    fb.style.color = "#00e676";
+    fb.textContent = `Created & synced user "${res.user.name}" (PIN SHA-256 Hashed)!`;
+    syncDatabaseWithPeer();
+    renderAdminTable();
+  }
+
+  function handleImportDBFile(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async e => {
+      const res = await window.TavliDB.importDatabaseJSON(e.target.result);
+      const fb = document.getElementById("adminFeedback");
+      if (!res.ok) {
+        alert(res.message);
+      } else {
+        if (fb) {
+          fb.style.color = "#00e676";
+          fb.textContent = "Database JSON loaded, PINs hashed, and pushed to Server!";
+        }
+        syncDatabaseWithPeer();
+        renderAdminTable();
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function escapeHtml(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  // --- 4. Web Audio API Sound Synthesizer ---
+  let audioCtx = null;
+  let soundEnabled = true;
+
+  function ensureAudio() {
+    if (!soundEnabled) return null;
+    if (!audioCtx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContext();
+    }
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+
+  function toggleSound() {
+    soundEnabled = !soundEnabled;
+    document.getElementById("muteBtn").textContent = soundEnabled ? t().soundOn : t().soundOff;
+    if (soundEnabled) playCheckerClack(false);
+  }
+
+  function playCheckerClack(isHeavy = false) {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    const triggerHit = (offset, pitchBoost) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(195 * pitchBoost, now + offset);
+      osc.frequency.exponentialRampToValueAtTime(58, now + offset + 0.065);
+
+      gain.gain.setValueAtTime(0.45, now + offset);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.07);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + offset);
+      osc.stop(now + offset + 0.075);
+
+      const bufferSize = ctx.sampleRate * 0.025;
+      const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = noiseBuffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.value = 1450 * pitchBoost;
+      filter.Q.value = 3.2;
+
+      const nGain = ctx.createGain();
+      nGain.gain.setValueAtTime(0.6, now + offset);
+      nGain.gain.exponentialRampToValueAtTime(0.01, now + offset + 0.025);
+
+      noise.connect(filter);
+      filter.connect(nGain);
+      nGain.connect(ctx.destination);
+      noise.start(now + offset);
+    };
+
+    triggerHit(0, 1.0);
+    if (isHeavy) triggerHit(0.055, 1.18);
+  }
+
+  function playDiceRattle() {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    const bounceTimes = [0, 0.07, 0.15, 0.24, 0.35, 0.47];
+    bounceTimes.forEach((tOffset, idx) => {
+      const now = ctx.currentTime + tOffset;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      const freq = 620 + (idx * 65) + (cryptoDie() * 35);
+      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.exponentialRampToValueAtTime(180, now + 0.035);
+
+      const vol = 0.28 * Math.pow(0.82, idx);
+      gain.gain.setValueAtTime(vol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.045);
+    });
+  }
+
+  function playTurnChime() {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    [587.33, 880].forEach((freq, idx) => {
+      const now = ctx.currentTime + idx * 0.11;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now);
+      gain.gain.setValueAtTime(0.28, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.29);
+    });
+  }
+
+  function playChatSound() {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    [523.25, 783.99].forEach((freq, idx) => {
+      const now = ctx.currentTime + idx * 0.065;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now);
+      gain.gain.setValueAtTime(0.22, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.16);
+    });
+  }
+
+  function playWinFanfare() {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    [440, 554.37, 659.25, 880, 1046.5].forEach((freq, i) => {
+      const now = ctx.currentTime + i * 0.085;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.26, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.37);
+    });
+  }
+
+  // --- 5. 4G/5G Mobile Data STUN + Free OpenRelay TURN Configuration ---
+  const PEER_CONFIG = {
+    config: {
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun.cloudflare.com:3478" },
+        {
+          urls: "turn:openrelay.metered.ca:80",
+          username: "openrelayproject",
+          credential: "openrelayproject"
+        },
+        {
+          urls: "turn:openrelay.metered.ca:443",
+          username: "openrelayproject",
+          credential: "openrelayproject"
+        },
+        {
+          urls: "turn:openrelay.metered.ca:443?transport=tcp",
+          username: "openrelayproject",
+          credential: "openrelayproject"
+        },
+        {
+          urls: "turns:openrelay.metered.ca:443",
+          username: "openrelayproject",
+          credential: "openrelayproject"
+        }
+      ]
+    }
+  };
+
+  // --- 6. Core Tavli Match, Direct Move Explorer & 5-Minute Disconnect Recovery ---
+  let myPlayerName = "Player 1";
+  let playerNames = { W: "Player 1", B: "Player 2" };
+  let pendingRoomFromUrl = null;
+  let rollOffTimer = null;
+  let autoRollTimer = null;
+  let confettiCleanupTimer = null;
+  let activeSetSummaryObj = null;
+
+  let state = {
+    variantSequence: ["PORTES", "PLAKOTO", "FEVGA"],
+    variantIdx: 0,
+    targetScore: 7,
+    scoreW: 0,
+    scoreB: 0,
+    phase: "ROLL_OFF",
+    rollOff: { W: null, B: null },
+    turn: "W",
+    dice: [],
+    displayDice: [],
+    rolled: false,
+    requireEndTurn: true,
+    autoRoll: false,
+    colors: { W: "white", B: "black" },
+    points: [],
+    bar: { W: 0, B: 0 },
+    off: { W: 0, B: 0 },
+    fevgaPassed: { W: false, B: false },
+    setGamesLog: [],
+    setRollCounts: { W: {}, B: {} },
+    lastAction: "INIT",
+    lastMoveAnim: null,
+    lastWinEvent: null,
+    lastSetSummary: null
+  };
+
+  let lastRecordedWinEventId = null;
+  let lastShownSummaryId = null;
+  let myRematchVote = false;
+  let peerRematchVote = false;
+
+  let turnHistory = [];
+  let selectedFrom = null;
+  let validTargets = [];
+  let isAnimatingDice = false;
+  let isAnimatingChecker = false;
+  let lastPointTap = { idx: -1, time: 0 };
+
+  let peer = null;
+  let conn = null;
+  let myRole = "BOTH";
+  let activeRoomCode = "";
+  let opponentLeftHandled = false;
+  let localTypingTimeout = null;
+  let remoteTypingTimeout = null;
+
+  let packetQueue = [];
+  let isProcessingPacket = false;
+
+  function saveActiveRoomBackup() {
+    if (!activeRoomCode || isAiMatch || state.phase === "SET_OVER") return;
+    try {
+      const backup = {
+        roomCode: activeRoomCode,
+        myRole,
+        myPlayerName,
+        playerNames: cloneState(playerNames),
+        state: cloneState(state),
+        savedAt: Date.now()
+      };
+      localStorage.setItem(ROOM_BACKUP_KEY, JSON.stringify(backup));
+    } catch (_) {}
+  }
+
+  function getActiveRoomBackup(code) {
+    try {
+      const raw = localStorage.getItem(ROOM_BACKUP_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || !parsed.roomCode) return null;
+      if (Date.now() - (parsed.savedAt || 0) > RECONNECT_WINDOW_MS) {
+        localStorage.removeItem(ROOM_BACKUP_KEY);
+        return null;
+      }
+      if (code && parsed.roomCode.toUpperCase() !== code.toUpperCase()) return null;
+      return parsed;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function clearActiveRoomBackup() {
+    localStorage.removeItem(ROOM_BACKUP_KEY);
+  }
+
+  function currentVariant() {
+    const seq = state.variantSequence && state.variantSequence.length ? state.variantSequence : ["PORTES", "PLAKOTO", "FEVGA"];
+    return seq[state.variantIdx % seq.length];
+  }
+
+  function resetSetTracking() {
+    state.setGamesLog = [];
+    state.setRollCounts = { W: {}, B: {} };
+    state.lastSetSummary = null;
+    activeSetSummaryObj = null;
+    myRematchVote = false;
+    peerRematchVote = false;
+  }
+
+  function recordDiceComboInSet(player, d1, d2) {
+    if (!state.setRollCounts) state.setRollCounts = { W: {}, B: {} };
+    if (!state.setRollCounts[player]) state.setRollCounts[player] = {};
+    const hi = Math.max(d1, d2);
+    const lo = Math.min(d1, d2);
+    const key = `${hi}-${lo}`;
+    state.setRollCounts[player][key] = (state.setRollCounts[player][key] || 0) + 1;
+  }
+
+  function getMostRolledComboStr(countsMap) {
+    const tr = t();
+    if (!countsMap || typeof countsMap !== "object") return tr.noRollsRecorded;
+    const entries = Object.entries(countsMap);
+    if (entries.length === 0) return tr.noRollsRecorded;
+    entries.sort((a, b) => b[1] - a[1]);
+    const [combo, count] = entries[0];
+    return `${combo} (${count}x)`;
+  }
+
+  function recordWinEventToDatabase(winEv) {
+    if (isAiMatch) return;
+    if (!winEv || !winEv.id || winEv.id === lastRecordedWinEventId) return;
+    lastRecordedWinEventId = winEv.id;
+
+    const wName = playerNames.W;
+    const bName = playerNames.B;
+    const wWon = winEv.winner === "W";
+
+    if (!winEv.forfeitSetOnly) {
+      window.TavliDB.recordGameOutcome(wName, bName, winEv.variant, wWon);
+      window.TavliDB.recordGameOutcome(bName, wName, winEv.variant, !wWon);
+    }
+
+    if (winEv.matchOver) {
+      window.TavliDB.recordSetOutcome(wName, bName, wWon);
+      window.TavliDB.recordSetOutcome(bName, wName, !wWon);
+    }
+
+    syncDatabaseWithPeer();
+  }
+
+  function updateHeaderLabels() {
+    const metaW = getColorMeta(state.colors.W);
+    const metaB = getColorMeta(state.colors.B);
+    document.getElementById("colorLabelW").textContent = metaW.label;
+    document.getElementById("colorLabelB").textContent = metaB.label;
+    document.getElementById("nameW").textContent = playerNames.W;
+    document.getElementById("nameB").textContent = playerNames.B;
+    document.getElementById("targetW").textContent = state.targetScore;
+    document.getElementById("targetB").textContent = state.targetScore;
+  }
+
+  function cryptoDie() {
+    const buf = new Uint8Array(1);
+    while (true) {
+      window.crypto.getRandomValues(buf);
+      if (buf[0] < 252) return (buf[0] % 6) + 1;
+    }
+  }
+
+  function generateSecureRoomCode() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const buf = new Uint8Array(6);
+    window.crypto.getRandomValues(buf);
+    return Array.from(buf, b => chars[b % 32]).join("");
+  }
+
+  function cloneState(s) {
+    return JSON.parse(JSON.stringify(s));
+  }
+
+  function getPath(variant, player) {
+    if (variant === "PORTES") {
+      if (player === "W") return Array.from({ length: 24 }, (_, i) => i);
+      return Array.from({ length: 24 }, (_, i) => 23 - i);
+    }
+    if (variant === "PLAKOTO") {
+      if (player === "W") return Array.from({ length: 24 }, (_, i) => 23 - i);
+      return Array.from({ length: 24 }, (_, i) => i);
+    }
+    if (player === "W") return Array.from({ length: 24 }, (_, i) => i);
+    return Array.from({ length: 24 }, (_, i) => (12 + i) % 24);
+  }
+
+  function initGame(starter = "ROLL_OFF") {
+    if (rollOffTimer) { clearTimeout(rollOffTimer); rollOffTimer = null; }
+    if (autoRollTimer) { clearTimeout(autoRollTimer); autoRollTimer = null; }
+    if (aiTurnTimer) { clearTimeout(aiTurnTimer); aiTurnTimer = null; }
+
+    const v = currentVariant();
+    if (starter === "ROLL_OFF") {
+      state.phase = "ROLL_OFF";
+      state.rollOff = { W: null, B: null };
+      state.turn = "W";
+    } else {
+      state.phase = "PLAY";
+      state.rollOff = { W: null, B: null };
+      state.turn = starter;
+    }
+    state.dice = [];
+    state.displayDice = [];
+    state.rolled = false;
+    state.bar = { W: 0, B: 0 };
+    state.off = { W: 0, B: 0 };
+    state.fevgaPassed = { W: false, B: false };
+    state.lastAction = "INIT";
+    state.lastMoveAnim = null;
+    state.points = Array.from({ length: 24 }, () => ({ owner: null, count: 0, pinned: null }));
+
+    if (v === "PORTES") {
+      setPt(0, "W", 2); setPt(11, "W", 5); setPt(16, "W", 3); setPt(18, "W", 5);
+      setPt(23, "B", 2); setPt(12, "B", 5); setPt(7, "B", 3); setPt(5, "B", 5);
+    } else if (v === "PLAKOTO") {
+      setPt(23, "W", 15);
+      setPt(0, "B", 15);
+    } else if (v === "FEVGA") {
+      setPt(0, "W", 15);
+      setPt(12, "B", 15);
+    }
+    turnHistory = [];
+    selectedFrom = null;
+    validTargets = [];
+    updateHeaderLabels();
+    saveActiveRoomBackup();
+    render();
+    checkTriggerAutoRollOrAI();
+  }
+
+  function setPt(idx, owner, count) {
+    state.points[idx] = { owner, count, pinned: null };
+  }
+
+  function checkTriggerAutoRollOrAI() {
+    if (autoRollTimer) { clearTimeout(autoRollTimer); autoRollTimer = null; }
+    if (aiTurnTimer) { clearTimeout(aiTurnTimer); aiTurnTimer = null; }
+    if (state.phase === "SET_OVER" || isWaitingForReconnect) return;
+
+    if (isAiMatch && state.turn === "B" && !state.rolled && !isAnimatingDice && !isAnimatingChecker) {
+      aiTurnTimer = setTimeout(() => {
+        if (isAiMatch && state.turn === "B" && !state.rolled && state.phase !== "SET_OVER") {
+          handleRoll(true);
+        }
+      }, 650);
+      return;
+    }
+
+    if (!state.autoRoll || state.phase !== "PLAY" || state.rolled || isAnimatingDice) return;
+    const isMyTurn = (myRole === "BOTH" && !isAiMatch) || myRole === state.turn;
+    if (!isMyTurn) return;
+
+    autoRollTimer = setTimeout(() => {
+      if (state.autoRoll && state.phase === "PLAY" && !state.rolled && !isAnimatingDice && !isWaitingForReconnect) {
+        handleRoll();
+      }
+    }, 450);
+  }
+
+  function handleRoll(triggeredByAi = false) {
+    if (state.phase === "SET_OVER" || isWaitingForReconnect || state.rolled || isAnimatingDice || isAnimatingChecker) return;
+    if (!triggeredByAi && myRole !== "BOTH" && myRole !== state.turn) return;
+
+    const tr = t();
+
+    if (state.phase === "ROLL_OFF") {
+      const d = cryptoDie();
+      const roller = state.turn;
+      state.rollOff[roller] = d;
+      state.lastAction = "ROLL_OFF";
+      state.lastMoveAnim = null;
+
+      if (roller === "W") {
+        state.turn = "B";
+        syncState();
+        animateBoardRollOffDie("W", () => {
+          setStatus(tr.rolled1DieWait(playerNames.W, d, playerNames.B));
+          if (myRole === "BOTH" && !isAiMatch) playTurnChime();
+          render();
+          checkTriggerAutoRollOrAI();
+        });
+      } else {
+        state.rolled = true;
+        syncState();
+        animateBoardRollOffDie("B", () => {
+          resolveRollOffOutcome();
+        });
+      }
+      return;
+    }
+
+    const d1 = cryptoDie();
+    const d2 = cryptoDie();
+    recordDiceComboInSet(state.turn, d1, d2);
+    state.displayDice = [d1, d2];
+    state.dice = d1 === d2 ? [d1, d1, d1, d1] : [d1, d2];
+    state.rolled = true;
+    state.lastAction = "ROLL";
+    state.lastMoveAnim = null;
+    turnHistory = [];
+
+    syncState();
+    animateDiceRoll(2, () => {
+      setStatus(t().rolledPair(d1, d2, d1 === d2));
+      if (!hasAnyLegalMove(state.turn)) {
+        const curName = state.turn === "W" ? playerNames.W : playerNames.B;
+        setStatus(t().noLegalMoves(curName));
+        setTimeout(() => {
+          handleEndTurn(true);
+        }, 1100);
+        return;
+      }
+      render();
+      if (isAiMatch && state.turn === "B") {
+        setTimeout(() => playAiTurnSequence(), 500);
+      }
+    });
+  }
+
+  // --- AI Decision Engine ---
+  function generateAllLegalTurnSequences(rootState, player) {
+    const completed = [];
+    const MAX_BRANCHES = 220;
+
+    function dfs(curState, seqSoFar) {
+      if (completed.length >= MAX_BRANCHES) return;
+      if (curState.dice.length === 0) {
+        completed.push({ finalState: curState, steps: seqSoFar });
+        return;
+      }
+
+      const singleMoves = [];
+      if (curState.bar[player] > 0) {
+        singleMoves.push(...getSingleStepMovesFrom(curState, "BAR", player));
+      } else {
+        for (let i = 0; i < 24; i++) {
+          if (curState.points[i].owner === player && curState.points[i].count > 0) {
+            singleMoves.push(...getSingleStepMovesFrom(curState, i, player));
+          }
+        }
+      }
+
+      if (singleMoves.length === 0) {
+        completed.push({ finalState: curState, steps: seqSoFar });
+        return;
+      }
+
+      const seen = new Set();
+      for (const m of singleMoves) {
+        const key = `${m.from}->${m.to}:${m.die}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        const nextS = cloneState(curState);
+        const out = applySingleStepToState(nextS, m);
+        const nextSeq = [...seqSoFar, m];
+
+        if (out.manaWin || out.bearOffWin) {
+          completed.push({ finalState: nextS, steps: nextSeq, instantWin: true });
+        } else {
+          dfs(nextS, nextSeq);
+        }
+      }
+    }
+
+    dfs(rootState, []);
+    return completed;
+  }
+
+  function evaluateStateProbability(s, aiPlayer) {
+    const human = aiPlayer === "W" ? "B" : "W";
+    const v = currentVariant();
+    const aiPath = getPath(v, aiPlayer);
+    const huPath = getPath(v, human);
+
+    if (s.off[aiPlayer] === 15) return 100000;
+    if (v === "PLAKOTO") {
+      const huStart = human === "W" ? 23 : 0;
+      const aiStart = aiPlayer === "W" ? 23 : 0;
+      if (s.points[huStart].pinned === human && s.points[aiStart].pinned !== aiPlayer) return 100000;
+    }
+
+    let score = 0;
+
+    score += s.off[aiPlayer] * 48;
+    score -= s.off[human] * 48;
+
+    let aiPips = s.bar[aiPlayer] * 25;
+    let huPips = s.bar[human] * 25;
+
+    for (let step = 0; step < 24; step++) {
+      const idxAi = aiPath[step];
+      if (s.points[idxAi].owner === aiPlayer) {
+        aiPips += s.points[idxAi].count * (24 - step);
+      }
+      const idxHu = huPath[step];
+      if (s.points[idxHu].owner === human) {
+        huPips += s.points[idxHu].count * (24 - step);
+      }
+    }
+    score += (huPips - aiPips) * 1.35;
+
+    if (v === "PORTES" || v === "PLAKOTO") {
+      if (v === "PORTES") {
+        score += s.bar[human] * 55;
+        score -= s.bar[aiPlayer] * 65;
+      } else {
+        const aiStart = aiPlayer === "W" ? 23 : 0;
+        const huStart = human === "W" ? 23 : 0;
+        if (s.points[aiStart].owner === aiPlayer && s.points[aiStart].count === 1) {
+          score -= 95;
+        }
+        for (let i = 0; i < 24; i++) {
+          if (s.points[i].pinned === human) {
+            const huStep = huPath.indexOf(i);
+            score += 50 + (24 - huStep) * 2.2;
+            if (i === huStart) score += 200;
+          }
+          if (s.points[i].pinned === aiPlayer) {
+            const aiStep = aiPath.indexOf(i);
+            score -= (55 + (24 - aiStep) * 2.2);
+          }
+        }
+      }
+
+      let consecutiveDoors = 0;
+      for (let step = 0; step < 24; step++) {
+        const idx = aiPath[step];
+        const pt = s.points[idx];
+        if (pt.owner === aiPlayer && pt.count >= 2) {
+          consecutiveDoors++;
+          score += 12 + (step >= 18 ? 6 : 0) + consecutiveDoors * 4;
+        } else {
+          consecutiveDoors = 0;
+        }
+      }
+
+      for (let step = 0; step < 24; step++) {
+        const idx = aiPath[step];
+        const pt = s.points[idx];
+        if (pt.owner === aiPlayer && pt.count === 1 && !pt.pinned) {
+          const huTargetStep = huPath.indexOf(idx);
+          let hittingRolls = 0;
+          for (let d1 = 1; d1 <= 6; d1++) {
+            for (let d2 = 1; d2 <= 6; d2++) {
+              if (canHumanReachStepWithRoll(s, human, huPath, huTargetStep, d1, d2, v)) {
+                hittingRolls++;
+              }
+            }
+          }
+          const hitProbability = hittingRolls / 36;
+          const blotValue = v === "PLAKOTO" ? 68 : (25 + step * 1.8);
+          score -= hitProbability * blotValue;
+        }
+      }
+    } else if (v === "FEVGA") {
+      if (s.fevgaPassed[aiPlayer]) score += 45;
+      let blockStreak = 0;
+      for (let step = 0; step < 24; step++) {
+        const idx = aiPath[step];
+        if (s.points[idx].owner === aiPlayer && s.points[idx].count >= 1) {
+          blockStreak++;
+          score += (step >= 11 && step <= 18) ? 14 : 8;
+          score += blockStreak * 3;
+        } else {
+          blockStreak = 0;
+        }
+      }
+    }
+
+    return score;
+  }
+
+  function canHumanReachStepWithRoll(s, human, huPath, targetStep, d1, d2, variant) {
+    if (s.bar[human] > 0) {
+      return d1 - 1 === targetStep || d2 - 1 === targetStep || (d1 + d2 - 1 === targetStep);
+    }
+    const checkDist = dist => {
+      const origStep = targetStep - dist;
+      if (origStep < 0) return false;
+      const origIdx = huPath[origStep];
+      return s.points[origIdx].owner === human && s.points[origIdx].count > 0;
+    };
+    if (checkDist(d1) || checkDist(d2)) return true;
+    if (checkDist(d1 + d2)) {
+      const midStep1 = targetStep - d1;
+      const midStep2 = targetStep - d2;
+      const mid1Open = midStep1 >= 0 && !(s.points[huPath[midStep1]].owner !== human && s.points[huPath[midStep1]].count >= 2);
+      const mid2Open = midStep2 >= 0 && !(s.points[huPath[midStep2]].owner !== human && s.points[huPath[midStep2]].count >= 2);
+      return mid1Open || mid2Open;
+    }
+    return false;
+  }
+
+  function playAiTurnSequence() {
+    if (!isAiMatch || state.turn !== "B" || !state.rolled || state.phase !== "PLAY") return;
+
+    const allSeqs = generateAllLegalTurnSequences(state, "B");
+    if (allSeqs.length === 0 || allSeqs[0].steps.length === 0) {
+      handleEndTurn(true);
+      return;
+    }
+
+    let chosen = allSeqs[0];
+
+    if (myAiDifficulty === "EASY") {
+      const scored = allSeqs.map(item => ({
+        item,
+        score: evaluateStateProbability(item.finalState, "B") + (Math.random() * 120 - 60)
+      }));
+      scored.sort((a, b) => a.score - b.score);
+      const pool = scored.slice(0, Math.max(1, Math.ceil(scored.length * 0.6)));
+      chosen = pool[cryptoDie() % pool.length].item;
+    } else if (myAiDifficulty === "MEDIUM") {
+      let bestScore = -Infinity;
+      for (const item of allSeqs) {
+        const sc = evaluateStateProbability(item.finalState, "B") + (Math.random() * 28 - 14);
+        if (sc > bestScore) {
+          bestScore = sc;
+          chosen = item;
+        }
+      }
+    } else {
+      let bestScore = -Infinity;
+      for (const item of allSeqs) {
+        if (item.instantWin) {
+          chosen = item;
+          break;
+        }
+        const sc = evaluateStateProbability(item.finalState, "B");
+        if (sc > bestScore) {
+          bestScore = sc;
+          chosen = item;
+        }
+      }
+    }
+
+    const stepsQueue = [...chosen.steps];
+
+    function runNextAiStep() {
+      if (stepsQueue.length === 0 || state.turn !== "B" || state.phase !== "PLAY") {
+        if (state.turn === "B" && state.phase === "PLAY") {
+          setTimeout(() => handleEndTurn(true), 320);
+        }
+        return;
+      }
+      const nextStep = stepsQueue.shift();
+      executeMoveSequence([nextStep], () => {
+        if (state.turn === "B" && state.phase === "PLAY" && stepsQueue.length > 0) {
+          setTimeout(runNextAiStep, 260);
+        } else if (state.turn === "B" && state.phase === "PLAY") {
+          setTimeout(() => handleEndTurn(true), 340);
+        }
+      });
+    }
+
+    runNextAiStep();
+  }
+
+  function animateBoardRollOffDie(side, onComplete) {
+    isAnimatingDice = true;
+    playDiceRattle();
+    const leftZone = document.getElementById("rollOffLeftZone");
+    const rightZone = document.getElementById("rollOffRightZone");
+
+    const shuffleTimer = setInterval(() => {
+      if (side === "W") {
+        leftZone.innerHTML = "";
+        leftZone.appendChild(createDieEl(cryptoDie(), true, false));
+      } else {
+        if (state.rollOff.W !== null && leftZone.children.length === 0) {
+          leftZone.appendChild(createDieEl(state.rollOff.W, false, false));
+        }
+        rightZone.innerHTML = "";
+        rightZone.appendChild(createDieEl(cryptoDie(), true, false));
+      }
+    }, 85);
+
+    setTimeout(() => {
+      clearInterval(shuffleTimer);
+      isAnimatingDice = false;
+      render();
+      if (onComplete) onComplete();
+    }, 550);
+  }
+
+  function resolveRollOffOutcome() {
+    const wRoll = state.rollOff.W;
+    const bRoll = state.rollOff.B;
+    if (wRoll === null || bRoll === null) return;
+    const tr = t();
+
+    if (wRoll === bRoll) {
+      setStatus(tr.rollOffTie(wRoll, bRoll));
+      render();
+      rollOffTimer = setTimeout(() => {
+        state.rollOff = { W: null, B: null };
+        state.displayDice = [];
+        state.rolled = false;
+        state.turn = "W";
+        if (myRole === "W" || myRole === "BOTH") playTurnChime();
+        render();
+        checkTriggerAutoRollOrAI();
+      }, 1500);
+    } else {
+      const winner = wRoll > bRoll ? "W" : "B";
+      const winName = winner === "W" ? playerNames.W : playerNames.B;
+      setStatus(tr.rollOffWin(playerNames.W, wRoll, playerNames.B, bRoll, winName));
+      render();
+      rollOffTimer = setTimeout(() => {
+        state.phase = "PLAY";
+        state.rollOff = { W: null, B: null };
+        state.displayDice = [];
+        state.dice = [];
+        state.rolled = false;
+        state.turn = winner;
+        if (myRole === winner || (myRole === "BOTH" && !isAiMatch)) playTurnChime();
+        setStatus(t().rollOffStart(winName, state.autoRoll || (isAiMatch && winner === "B")));
+        saveActiveRoomBackup();
+        render();
+        checkTriggerAutoRollOrAI();
+      }, 1500);
+    }
+  }
+
+  function animateDiceRoll(numDice = 2, onComplete) {
+    isAnimatingDice = true;
+    playDiceRattle();
+    const dc = document.getElementById("diceContainer");
+
+    const shuffleTimer = setInterval(() => {
+      dc.innerHTML = "";
+      for (let i = 0; i < numDice; i++) {
+        dc.appendChild(createDieEl(cryptoDie(), true, false));
+      }
+    }, 85);
+
+    setTimeout(() => {
+      clearInterval(shuffleTimer);
+      isAnimatingDice = false;
+      render();
+      if (onComplete) onComplete();
+    }, 550);
+  }
+
+  function animateCheckerTransition(fromLoc, toLoc, player, onComplete) {
+    const srcEl = getSlotOrPointElement(fromLoc, player);
+    const dstEl = getSlotOrPointElement(toLoc, player);
+    if (!srcEl || !dstEl) {
+      if (onComplete) onComplete();
+      return;
+    }
+
+    const srcCheckers = srcEl.querySelectorAll(".checker:not(.pinned-base)");
+    const startTarget = srcCheckers.length > 0 ? srcCheckers[srcCheckers.length - 1] : srcEl;
+    const startRect = startTarget.getBoundingClientRect();
+
+    const dstCheckers = dstEl.querySelectorAll(".checker");
+    const endTarget = dstCheckers.length > 0 ? dstCheckers[dstCheckers.length - 1] : dstEl;
+    const endRect = endTarget.getBoundingClientRect();
+
+    const size = startTarget.classList && startTarget.classList.contains("checker")
+      ? startRect.width
+      : Math.min(srcEl.getBoundingClientRect().width * 0.78, 38);
+
+    const startX = startRect.left + (startRect.width - size) / 2;
+    const startY = startRect.top + (startRect.height - size) / 2;
+    const endX = endRect.left + (endRect.width - size) / 2;
+    const endY = endRect.top + (endRect.height - size) / 2;
+
+    const flyer = document.createElement("div");
+    const ownerColor = state.colors[player];
+    flyer.className = `checker clr-${ownerColor} flying-checker`;
+    flyer.style.width = `${size}px`;
+    flyer.style.height = `${size}px`;
+    flyer.style.left = `${startX}px`;
+    flyer.style.top = `${startY}px`;
+
+    if (startTarget !== srcEl) {
+      const originCount = fromLoc === "BAR"
+        ? state.bar[player]
+        : (state.points[fromLoc] ? state.points[fromLoc].count : 1);
+      const maxVis = (fromLoc !== "BAR" && state.points[fromLoc] && state.points[fromLoc].pinned) ? 4 : 5;
+      if (originCount > maxVis) {
+        startTarget.textContent = originCount - 1 > maxVis ? String(originCount - 1) : "";
+      } else {
+        startTarget.style.opacity = "0";
+      }
+    }
+
+    document.body.appendChild(flyer);
+    void flyer.offsetWidth;
+    flyer.style.left = `${endX}px`;
+    flyer.style.top = `${endY}px`;
+    flyer.style.transform = "scale(1.12)";
+
+    isAnimatingChecker = true;
+    setTimeout(() => {
+      flyer.remove();
+      isAnimatingChecker = false;
+      if (onComplete) onComplete();
+    }, 275);
+  }
+
+  function getSlotOrPointElement(loc, player) {
+    if (loc === "BAR") {
+      return document.querySelector(`[data-bar-owner="${player}"]`);
+    }
+    if (loc === "OFF") {
+      return document.querySelector(`[data-off-owner="${player}"]`);
+    }
+    return document.querySelector(`.point[data-pt-idx="${loc}"]`);
+  }
+
+  function violatesFevgaPrimeRule(s, fromOrigin, destIdx, player, path) {
+    const startQuadIndices = path.slice(0, 6);
+    let occupiedCount = 0;
+    for (const qIdx of startQuadIndices) {
+      let c = (s.points[qIdx].owner === player) ? s.points[qIdx].count : 0;
+      if (qIdx === fromOrigin) c--;
+      if (qIdx === destIdx) c++;
+      if (c > 0) occupiedCount++;
+    }
+    return occupiedCount === 6;
+  }
+
+  function getSingleStepMovesFrom(s, origin, player) {
+    const seq = s.variantSequence && s.variantSequence.length ? s.variantSequence : ["PORTES", "PLAKOTO", "FEVGA"];
+    const v = seq[s.variantIdx % seq.length];
+    const path = getPath(v, player);
+    const opp = player === "W" ? "B" : "W";
+    const uniqueDice = [...new Set(s.dice)];
+    const moves = [];
+
+    if (s.bar[player] > 0 && origin !== "BAR") return [];
+    if (origin === "BAR" && s.bar[player] === 0) return [];
+
+    let startStep = -1;
+    if (origin !== "BAR") {
+      const pt = s.points[origin];
+      if (!pt || pt.owner !== player || pt.count === 0) return [];
+      startStep = path.indexOf(origin);
+      if (v === "FEVGA" && startStep === 0 && !s.fevgaPassed[player] && pt.count <= 14) {
+        return [];
+      }
+    }
+
+    const canBearOff = isReadyToBearOffState(s, player, v, path);
+
+    for (const die of uniqueDice) {
+      const targetStep = startStep + die;
+      if (targetStep >= 24) {
+        if (!canBearOff || origin === "BAR") continue;
+        if (targetStep === 24) {
+          moves.push({ from: origin, to: "OFF", die, exact: true });
+        } else {
+          const hasFurtherBack = path.slice(18, startStep).some(idx => s.points[idx].owner === player && s.points[idx].count > 0);
+          if (!hasFurtherBack) moves.push({ from: origin, to: "OFF", die, exact: false });
+        }
+        continue;
+      }
+
+      const destIdx = path[targetStep];
+      const destPt = s.points[destIdx];
+
+      if (v === "PORTES") {
+        if (destPt.owner === opp && destPt.count >= 2) continue;
+        moves.push({ from: origin, to: destIdx, die });
+      } else if (v === "PLAKOTO") {
+        if (destPt.owner === opp && destPt.count >= 2) continue;
+        if (destPt.pinned !== null && destPt.owner === opp) continue;
+        moves.push({ from: origin, to: destIdx, die });
+      } else if (v === "FEVGA") {
+        if (destPt.owner === opp && destPt.count >= 1) continue;
+        if (violatesFevgaPrimeRule(s, origin, destIdx, player, path)) continue;
+        moves.push({ from: origin, to: destIdx, die });
+      }
+    }
+    return moves;
+  }
+
+  function isReadyToBearOffState(s, player, variant, path) {
+    if (s.bar[player] > 0) return false;
+    if (variant === "PLAKOTO" && s.points.some(p => p.pinned === player)) return false;
+    for (let step = 0; step < 18; step++) {
+      const pt = s.points[path[step]];
+      if (pt.owner === player && pt.count > 0) return false;
+    }
+    return true;
+  }
+
+  function applySingleStepToState(s, step) {
+    const { from, to, die } = step;
+    const player = s.turn;
+    const opp = player === "W" ? "B" : "W";
+    const seq = s.variantSequence && s.variantSequence.length ? s.variantSequence : ["PORTES", "PLAKOTO", "FEVGA"];
+    const v = seq[s.variantIdx % seq.length];
+    const path = getPath(v, player);
+    let wasHitOrPin = false;
+
+    if (from === "BAR") {
+      s.bar[player]--;
+    } else {
+      const src = s.points[from];
+      src.count--;
+      if (src.count === 0) {
+        if (src.pinned) {
+          src.owner = src.pinned;
+          src.count = 1;
+          src.pinned = null;
+        } else {
+          src.owner = null;
+        }
+      }
+    }
+
+    if (to === "OFF") {
+      s.off[player]++;
+    } else {
+      const dst = s.points[to];
+      if (v === "PORTES" && dst.owner === opp && dst.count === 1) {
+        dst.owner = player;
+        dst.count = 1;
+        s.bar[opp]++;
+        wasHitOrPin = true;
+      } else if (v === "PLAKOTO" && dst.owner === opp && dst.count === 1) {
+        dst.pinned = opp;
+        dst.owner = player;
+        dst.count = 1;
+        wasHitOrPin = true;
+      } else {
+        dst.owner = player;
+        dst.count++;
+      }
+
+      if (v === "FEVGA" && path.indexOf(to) >= 12) {
+        s.fevgaPassed[player] = true;
+      }
+    }
+
+    const dieIdx = s.dice.indexOf(die);
+    if (dieIdx > -1) s.dice.splice(dieIdx, 1);
+
+    let manaWin = false;
+    if (v === "PLAKOTO") {
+      const oppStartIdx = opp === "W" ? 23 : 0;
+      const myStartIdx = player === "W" ? 23 : 0;
+      if (s.points[oppStartIdx].pinned === opp && s.points[myStartIdx].pinned !== player) {
+        manaWin = true;
+      }
+    }
+
+    return { wasHitOrPin, manaWin, bearOffWin: s.off[player] === 15 };
+  }
+
+  function getMovesFrom(origin, player) {
+    const resultsByDest = new Map();
+
+    function explore(currentState, currentOrigin, stepsSoFar) {
+      const singleMoves = getSingleStepMovesFrom(currentState, currentOrigin, player);
+      for (const step of singleMoves) {
+        const nextState = cloneState(currentState);
+        const outcome = applySingleStepToState(nextState, step);
+        const newSteps = [...stepsSoFar, step];
+        const totalDist = newSteps.reduce((sum, st) => sum + st.die, 0);
+
+        if (!resultsByDest.has(step.to)) {
+          resultsByDest.set(step.to, {
+            to: step.to,
+            steps: newSteps,
+            badge: `${totalDist}`
+          });
+        }
+
+        if (
+          step.to !== "OFF" &&
+          !outcome.manaWin &&
+          !outcome.bearOffWin &&
+          nextState.dice.length > 0 &&
+          nextState.bar[player] === 0
+        ) {
+          explore(nextState, step.to, newSteps);
+        }
+      }
+    }
+
+    explore(state, origin, []);
+    return Array.from(resultsByDest.values());
+  }
+
+  function hasAnyLegalMove(player) {
+    if (state.bar[player] > 0) return getSingleStepMovesFrom(state, "BAR", player).length > 0;
+    for (let i = 0; i < 24; i++) {
+      if (getSingleStepMovesFrom(state, i, player).length > 0) return true;
+    }
+    return false;
+  }
+
+  function tryBearOffFromPoint(idx) {
+    if (state.phase !== "PLAY" || isWaitingForReconnect || !state.rolled || isAnimatingDice || isAnimatingChecker) return false;
+    if (myRole !== "BOTH" && myRole !== state.turn) return false;
+
+    const player = state.turn;
+    const singleBearOffMoves = getSingleStepMovesFrom(state, idx, player).filter(m => m.to === "OFF");
+    if (singleBearOffMoves.length === 0) return false;
+
+    singleBearOffMoves.sort((a, b) => {
+      if (a.exact !== b.exact) return a.exact ? -1 : 1;
+      return a.die - b.die;
+    });
+
+    executeMoveSequence([singleBearOffMoves[0]]);
+    return true;
+  }
+
+  function selectBar(player) {
+    if (state.phase !== "PLAY" || isWaitingForReconnect || !state.rolled || isAnimatingDice || isAnimatingChecker || state.turn !== player) return;
+    if (myRole !== "BOTH" && myRole !== state.turn) return;
+    selectedFrom = "BAR";
+    validTargets = getMovesFrom("BAR", player);
+    render();
+  }
+
+  function handlePointClick(idx) {
+    if (state.phase !== "PLAY" || isWaitingForReconnect || !state.rolled || isAnimatingDice || isAnimatingChecker) return;
+    if (myRole !== "BOTH" && myRole !== state.turn) return;
+
+    const now = Date.now();
+    const isDoubleTap = (lastPointTap.idx === idx && (now - lastPointTap.time) < 360);
+    lastPointTap = { idx, time: now };
+
+    if (isDoubleTap && state.points[idx].owner === state.turn && state.points[idx].count > 0) {
+      if (tryBearOffFromPoint(idx)) {
+        lastPointTap = { idx: -1, time: 0 };
+        return;
+      }
+    }
+
+    const move = validTargets.find(m => m.to === idx);
+    if (move && selectedFrom !== null) {
+      executeMoveSequence(move.steps);
+      return;
+    }
+
+    if (state.points[idx].owner === state.turn && state.points[idx].count > 0) {
+      selectedFrom = idx;
+      validTargets = getMovesFrom(idx, state.turn);
+      render();
+    }
+  }
+
+  function attemptBearOff() {
+    if (state.phase !== "PLAY" || isWaitingForReconnect || !state.rolled || isAnimatingDice || isAnimatingChecker || selectedFrom === null) return;
+    if (myRole !== "BOTH" && myRole !== state.turn) return;
+    const move = validTargets.find(m => m.to === "OFF");
+    if (move) executeMoveSequence(move.steps);
+  }
+
+  function executeMoveSequence(steps, onSequenceDone = null) {
+    const startOrigin = steps[0].from;
+    const finalDest = steps[steps.length - 1].to;
+    const movingPlayer = state.turn;
+
+    selectedFrom = null;
+    validTargets = [];
+
+    animateCheckerTransition(startOrigin, finalDest, movingPlayer, () => {
+      turnHistory.push(cloneState(state));
+
+      const player = state.turn;
+      const opp = player === "W" ? "B" : "W";
+      let anyHitOrPin = false;
+      let manaWin = false;
+      let bearOffWin = false;
+
+      for (const step of steps) {
+        const outcome = applySingleStepToState(state, step);
+        if (outcome.wasHitOrPin) anyHitOrPin = true;
+        if (outcome.manaWin) { manaWin = true; break; }
+        if (outcome.bearOffWin) { bearOffWin = true; break; }
+      }
+
+      playCheckerClack(anyHitOrPin);
+      state.lastAction = anyHitOrPin ? "HIT" : "MOVE";
+      state.lastMoveAnim = { from: startOrigin, to: finalDest, player };
+
+      if (manaWin) {
+        finishGame(player, 2, t().manaWin, { from: startOrigin, to: finalDest, player });
+        return;
+      }
+
+      if (bearOffWin) {
+        const pts = state.off[opp] === 0 ? 2 : 1;
+        const wName = player === "W" ? playerNames.W : playerNames.B;
+        finishGame(player, pts, t().gameWin(wName, pts, wName), { from: startOrigin, to: finalDest, player });
+        return;
+      }
+
+      if (onSequenceDone) {
+        render();
+        onSequenceDone();
+        return;
+      }
+
+      const turnFinished = state.dice.length === 0 || !hasAnyLegalMove(state.turn);
+      if (turnFinished) {
+        if (!state.requireEndTurn) {
+          syncState();
+          render();
+          setTimeout(() => {
+            handleEndTurn(true);
+          }, 320);
+          return;
+        }
+        setStatus(t().movesComplete);
+      }
+
+      syncState();
+      render();
+    });
+  }
+
+  function handleUndo() {
+    if (turnHistory.length === 0 || isWaitingForReconnect || isAnimatingDice || isAnimatingChecker) return;
+    if (myRole !== "BOTH" && myRole !== state.turn) return;
+
+    state = turnHistory.pop();
+    state.lastAction = "UNDO";
+    state.lastMoveAnim = null;
+    selectedFrom = null;
+    validTargets = [];
+    playCheckerClack(false);
+    setStatus(t().moveUndone);
+    syncState();
+    render();
+  }
+
+  function handleEndTurn(forcedOrAuto = false) {
+    if (!state.rolled || isWaitingForReconnect || isAnimatingDice || isAnimatingChecker) return;
+    if (!forcedOrAuto && myRole !== "BOTH" && myRole !== state.turn) return;
+    if (!forcedOrAuto && state.dice.length > 0 && hasAnyLegalMove(state.turn)) return;
+
+    state.turn = state.turn === "W" ? "B" : "W";
+    state.rolled = false;
+    state.dice = [];
+    state.displayDice = [];
+    state.lastAction = "END_TURN";
+    state.lastMoveAnim = null;
+    turnHistory = [];
+    selectedFrom = null;
+    validTargets = [];
+
+    const nextName = state.turn === "W" ? playerNames.W : playerNames.B;
+    const willAutoRoll = state.autoRoll || (isAiMatch && state.turn === "B");
+    setStatus(t().nextTurnStatus(nextName, willAutoRoll));
+
+    if ((myRole === "BOTH" && !isAiMatch) || (isAiMatch && state.turn === "W")) {
+      playTurnChime();
+    }
+
+    syncState();
+    render();
+    checkTriggerAutoRollOrAI();
+  }
+
+  function finishGame(winner, pts, reason, winningMoveAnim = null) {
+    playWinFanfare();
+    const playedVariant = currentVariant();
+    turnHistory = [];
+    if (winner === "W") state.scoreW += pts; else state.scoreB += pts;
+    setStatus(reason);
+
+    if (!Array.isArray(state.setGamesLog)) state.setGamesLog = [];
+    state.setGamesLog.push({
+      gameNum: state.setGamesLog.length + 1,
+      variant: playedVariant,
+      winner,
+      pts
+    });
+
+    const target = state.targetScore || 7;
+    const isMatchOver = (state.scoreW >= target || state.scoreB >= target);
+
+    let winEv = null;
+    if (!isAiMatch) {
+      winEv = {
+        id: Date.now() + "-" + cryptoDie(),
+        winner,
+        variant: playedVariant,
+        matchOver: isMatchOver
+      };
+      state.lastWinEvent = winEv;
+      recordWinEventToDatabase(winEv);
+    } else {
+      state.lastWinEvent = null;
+    }
+
+    if (isMatchOver) {
+      clearActiveRoomBackup();
+      const summaryObj = {
+        id: "SET-" + Date.now() + "-" + cryptoDie(),
+        champRole: winner,
+        scoreW: state.scoreW,
+        scoreB: state.scoreB,
+        target,
+        gamesLog: cloneState(state.setGamesLog),
+        rollCounts: cloneState(state.setRollCounts || { W: {}, B: {} })
+      };
+      state.phase = "SET_OVER";
+      state.rolled = false;
+      state.dice = [];
+      state.displayDice = [];
+      state.lastSetSummary = summaryObj;
+      state.lastAction = "WIN";
+      state.lastMoveAnim = winningMoveAnim;
+      state.lastWinEvent = winEv;
+
+      syncState();
+      render();
+      showSetVictoryModal(summaryObj);
+    } else {
+      state.variantIdx = (state.variantIdx + 1) % state.variantSequence.length;
+      initGame(winner);
+      state.lastAction = "WIN";
+      state.lastMoveAnim = winningMoveAnim;
+      state.lastWinEvent = winEv;
+      syncState();
+      render();
+    }
+  }
+
+  // --- Resign Feature Logic ---
+  function openResignOfferModal() {
+    if (state.phase !== "PLAY" || isWaitingForReconnect) return;
+    document.getElementById("resignOfferModal").style.display = "flex";
+  }
+
+  function closeResignOfferModal() {
+    document.getElementById("resignOfferModal").style.display = "none";
+  }
+
+  function sendResignOffer(pts) {
+    closeResignOfferModal();
+    const validPts = pts === 2 ? 2 : 1;
+    const resigningRole = myRole === "BOTH" ? state.turn : myRole;
+    const winnerRole = resigningRole === "W" ? "B" : "W";
+    const loserName = resigningRole === "W" ? playerNames.W : playerNames.B;
+    const winnerName = winnerRole === "W" ? playerNames.W : playerNames.B;
+    const tr = t();
+
+    if (isAiMatch) {
+      finishGame(winnerRole, validPts, tr.resignAcceptedReason(loserName, winnerName, validPts));
+      return;
+    }
+
+    if (conn && conn.open) {
+      pendingResignOffer = { fromRole: resigningRole, pts: validPts };
+      conn.send({
+        type: "RESIGN_OFFER",
+        fromRole: resigningRole,
+        pts: validPts
+      });
+      setStatus(tr.resignSent(validPts));
+      return;
+    }
+
+    pendingResignOffer = { fromRole: resigningRole, pts: validPts };
+    document.getElementById("resignRespDesc").textContent = tr.resignRespDesc(loserName, validPts);
+    document.getElementById("resignRespondModal").style.display = "flex";
+  }
+
+  function respondToResignOffer(accepted) {
+    document.getElementById("resignRespondModal").style.display = "none";
+    if (!pendingResignOffer) return;
+
+    const { fromRole, pts } = pendingResignOffer;
+    pendingResignOffer = null;
+    const winnerRole = fromRole === "W" ? "B" : "W";
+    const loserName = fromRole === "W" ? playerNames.W : playerNames.B;
+    const winnerName = winnerRole === "W" ? playerNames.W : playerNames.B;
+    const tr = t();
+
+    if (conn && conn.open) {
+      conn.send({
+        type: "RESIGN_RESPONSE",
+        accepted,
+        fromRole,
+        pts
+      });
+    }
+
+    if (accepted) {
+      finishGame(winnerRole, pts, tr.resignAcceptedReason(loserName, winnerName, pts));
+    } else {
+      setStatus(tr.resignDeclined(winnerName));
+    }
+  }
+
+  // --- Celebratory Set Summary Modal with 2-Second Confetti ---
+  function spawnCelebrationConfetti() {
+    const layer = document.getElementById("confettiLayer");
+    if (!layer) return;
+    if (confettiCleanupTimer) clearTimeout(confettiCleanupTimer);
+    layer.innerHTML = "";
+    const colors = ["#ffb300", "#00e676", "#4fc3f7", "#ff5252", "#ce93d8", "#ffee58"];
+    for (let i = 0; i < 36; i++) {
+      const piece = document.createElement("div");
+      piece.className = "confetti-piece";
+      piece.style.left = `${(i * 2.8) % 100}%`;
+      piece.style.background = colors[i % colors.length];
+      piece.style.animationDuration = `${1.4 + (i % 4) * 0.18}s`;
+      piece.style.animationDelay = `${(i % 5) * 0.08}s`;
+      layer.appendChild(piece);
+    }
+    confettiCleanupTimer = setTimeout(() => {
+      layer.innerHTML = "";
+    }, 2000);
+  }
+
+  function changeSetGamesPage(delta) {
+    setGamesCurrentPage += delta;
+    renderSetVictoryModalBody();
+  }
+
+  function showSetVictoryModal(summary) {
+    if (!summary || summary.id === lastShownSummaryId) return;
+    lastShownSummaryId = summary.id;
+    activeSetSummaryObj = summary;
+    setGamesCurrentPage = 1;
+    myRematchVote = false;
+    peerRematchVote = false;
+
+    renderSetVictoryModalBody();
+    spawnCelebrationConfetti();
+    document.getElementById("setSummaryModal").style.display = "flex";
+  }
+
+  function renderSetVictoryModalBody() {
+    const summary = activeSetSummaryObj;
+    if (!summary) return;
+
+    const tr = t();
+    const champName = summary.champRole === "W" ? playerNames.W : playerNames.B;
+    const topComboW = getMostRolledComboStr(summary.rollCounts && summary.rollCounts.W);
+    const topComboB = getMostRolledComboStr(summary.rollCounts && summary.rollCounts.B);
+
+    const allGames = summary.gamesLog || [];
+    const gamesWonW = allGames.filter(g => g.winner === "W").length;
+    const gamesWonB = allGames.filter(g => g.winner === "B").length;
+
+    const totalPages = Math.max(1, Math.ceil(allGames.length / PAGE_SIZE));
+    if (setGamesCurrentPage > totalPages) setGamesCurrentPage = totalPages;
+    if (setGamesCurrentPage < 1) setGamesCurrentPage = 1;
+
+    const startIdx = (setGamesCurrentPage - 1) * PAGE_SIZE;
+    const pageGames = allGames.slice(startIdx, startIdx + PAGE_SIZE);
+
+    let gamesRows = "";
+    pageGames.forEach(g => {
+      const wName = g.winner === "W" ? playerNames.W : playerNames.B;
+      const vLabel = tr.variants[g.variant] || g.variant;
+      const ptsLabel = g.forfeit ? "Forfeit (Set Win)" : (g.pts === 2 ? "+2 (Diplo • 1 Game Win)" : "+1 (Moni • 1 Game Win)");
+      gamesRows += `
+        <tr>
+          <td>#${g.gameNum}</td>
+          <td>${escapeHtml(vLabel)}</td>
+          <td><strong style="color:var(--accent);">${escapeHtml(wName)}</strong></td>
+          <td>${ptsLabel}</td>
+        </tr>
+      `;
+    });
+
+    const pagerHtml = totalPages > 1 ? `
+      <div class="pagination-bar">
+        <button onclick="changeSetGamesPage(-1)" ${setGamesCurrentPage <= 1 ? "disabled" : ""}>${tr.prevPage}</button>
+        <span>${tr.pageOf(setGamesCurrentPage, totalPages)}</span>
+        <button onclick="changeSetGamesPage(1)" ${setGamesCurrentPage >= totalPages ? "disabled" : ""}>${tr.nextPage}</button>
+      </div>
+    ` : "";
+
+    const content = document.getElementById("setSummaryContent");
+    content.innerHTML = `
+      <div class="trophy-banner">
+        <div class="trophy-icon">🏆</div>
+        <div class="winner-headline">${escapeHtml(tr.setWinHeadline(champName))}</div>
+        <div style="font-size:0.82rem; color:#ffecb3; margin-top:4px;">
+          ${escapeHtml(tr.setScoreSub(summary.scoreW, summary.scoreB, summary.target, gamesWonW, gamesWonB, allGames.length))}
+        </div>
+      </div>
+
+      <div class="sub-heading">${tr.setGamesHeading}</div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>${tr.colGameNum}</th>
+            <th>${tr.colVariant}</th>
+            <th>${tr.colWinner}</th>
+            <th>${tr.colPts}</th>
+          </tr>
+        </thead>
+        <tbody>${gamesRows}</tbody>
+      </table>
+      ${pagerHtml}
+
+      <div class="sub-heading">${tr.setTopDiceHeading}</div>
+      <div class="stat-grid" style="grid-template-columns: 1fr 1fr;">
+        <div class="stat-box">
+          <div class="val" style="font-size:1rem;">🎲 ${escapeHtml(topComboW)}</div>
+          <div class="lbl">${escapeHtml(playerNames.W)}</div>
+        </div>
+        <div class="stat-box">
+          <div class="val" style="font-size:1rem;">🎲 ${escapeHtml(topComboB)}</div>
+          <div class="lbl">${escapeHtml(playerNames.B)}</div>
+        </div>
+      </div>
+
+      <p style="font-size:0.8rem; color:#d7ccc8; text-align:center; margin-top:8px;">
+        ${escapeHtml(tr.setPlayAgainPrompt)}
+      </p>
+      <div id="rematchWaitMsg" style="font-size:0.78rem; color:var(--valid); text-align:center; font-weight:bold; min-height:18px; margin-top:4px;">
+        ${myRematchVote ? escapeHtml(tr.waitingOpponentRematch) : ""}
+      </div>
+
+      <div class="set-Action-row">
+        <button class="btn-play-again" id="btnRematchConfirm" onclick="handlePlayAgainSameSettings()" ${myRematchVote ? "disabled" : ""}>${tr.btnPlayAgain}</button>
+        <button class="btn-exit-menu" onclick="handleExitToInitialMenu(true)">${tr.btnExitMenu}</button>
+      </div>
+    `;
+  }
+
+  function startNewSetWithSameSettings() {
+    document.getElementById("setSummaryModal").style.display = "none";
+    state.scoreW = 0;
+    state.scoreB = 0;
+    state.variantIdx = 0;
+    resetSetTracking();
+    initGame("ROLL_OFF");
+    if (myRole === "W") {
+      syncState();
+    }
+  }
+
+  function handlePlayAgainSameSettings() {
+    if (!conn || !conn.open || isAiMatch) {
+      startNewSetWithSameSettings();
+      return;
+    }
+
+    myRematchVote = true;
+    const btn = document.getElementById("btnRematchConfirm");
+    if (btn) btn.disabled = true;
+    const waitEl = document.getElementById("rematchWaitMsg");
+    if (waitEl) waitEl.textContent = t().waitingOpponentRematch;
+
+    conn.send({ type: "SET_DECISION", decision: "PLAY_AGAIN" });
+
+    if (peerRematchVote) {
+      startNewSetWithSameSettings();
+    }
+  }
+
+  function handleExitToInitialMenu(notifyPeer = true) {
+    stopDisconnectCountdown();
+    clearActiveRoomBackup();
+    document.getElementById("setSummaryModal").style.display = "none";
+    document.getElementById("playConfigModal").style.display = "none";
+
+    if (notifyPeer && conn && conn.open) {
+      try { conn.send({ type: "SET_DECISION", decision: "EXIT_MENU" }); } catch (_) {}
+    }
+    if (conn) {
+      try { conn.close(); } catch (_) {}
+      conn = null;
+    }
+    if (peer) {
+      try { peer.destroy(); } catch (_) {}
+      peer = null;
+    }
+
+    if (window.location.search) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    activeRoomCode = "";
+    pendingRoomFromUrl = null;
+    isAiMatch = false;
+    myRole = "BOTH";
+    opponentLeftHandled = false;
+    document.getElementById("shareBtn").style.display = "none";
+    document.getElementById("netBar").classList.remove("left-alert");
+    document.getElementById("netStatus").textContent = t().netDefault;
+
+    showScreen("LANDING");
+  }
+
+  // --- 7. Hardened WebRTC Multiplayer, 5-Minute Disconnect Countdown & Reconnect ---
+  function stopDisconnectCountdown() {
+    if (disconnectInterval) {
+      clearInterval(disconnectInterval);
+      disconnectInterval = null;
+    }
+    isWaitingForReconnect = false;
+    opponentLeftHandled = false;
+    const pill = document.getElementById("disconnectCountdown");
+    if (pill) pill.style.display = "none";
+    document.getElementById("netBar").classList.remove("left-alert");
+  }
+
+  function formatCountdownMMSS(msRemaining) {
+    const totalSec = Math.max(0, Math.ceil(msRemaining / 1000));
+    const mins = Math.floor(totalSec / 60);
+    const secs = totalSec % 60;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  }
+
+  function awardForfeitSetWinToConnectedPlayer() {
+    stopDisconnectCountdown();
+    clearActiveRoomBackup();
+
+    const winnerRole = myRole === "B" ? "B" : "W";
+    const loserRole = winnerRole === "W" ? "B" : "W";
+    const winnerName = winnerRole === "W" ? playerNames.W : playerNames.B;
+    const loserName = loserRole === "W" ? playerNames.W : playerNames.B;
+    const tr = t();
+    const target = state.targetScore || 7;
+
+    if (winnerRole === "W") state.scoreW = Math.max(state.scoreW, target);
+    else state.scoreB = Math.max(state.scoreB, target);
+
+    const reason = tr.forfeitTimeoutReason(loserName, winnerName);
+    setStatus(reason);
+
+    const playedVariant = currentVariant();
+    if (!Array.isArray(state.setGamesLog)) state.setGamesLog = [];
+    state.setGamesLog.push({
+      gameNum: state.setGamesLog.length + 1,
+      variant: playedVariant,
+      winner: winnerRole,
+      pts: 1,
+      forfeit: true
+    });
+
+    const winEv = {
+      id: "FORFEIT-" + Date.now(),
+      winner: winnerRole,
+      variant: playedVariant,
+      matchOver: true,
+      forfeitSetOnly: false
+    };
+    recordWinEventToDatabase(winEv);
+
+    const summaryObj = {
+      id: "SET-FORFEIT-" + Date.now(),
+      champRole: winnerRole,
+      scoreW: state.scoreW,
+      scoreB: state.scoreB,
+      target,
+      gamesLog: cloneState(state.setGamesLog),
+      rollCounts: cloneState(state.setRollCounts || { W: {}, B: {} })
+    };
+    state.phase = "SET_OVER";
+    state.rolled = false;
+    state.dice = [];
+    state.displayDice = [];
+    state.lastSetSummary = summaryObj;
+
+    playWinFanfare();
+    render();
+    showSetVictoryModal(summaryObj);
+  }
+
+  function hostRoom(reconnectingCode = null, restoredBackup = null) {
+    ensureAudio();
+    stopDisconnectCountdown();
+    isAiMatch = false;
+    const code = reconnectingCode || generateSecureRoomCode();
+    activeRoomCode = code;
+    packetQueue = [];
+    isProcessingPacket = false;
+    if (peer) peer.destroy();
+
+    peer = new Peer("tavli-net-" + code, PEER_CONFIG);
+    document.getElementById("netStatus").textContent = t().hostingWait(code);
+    document.getElementById("shareBtn").style.display = "inline-block";
+    myRole = "W";
+
+    if (restoredBackup && restoredBackup.state) {
+      playerNames = cloneState(restoredBackup.playerNames || { W: myPlayerName, B: "Friend" });
+      state = cloneState(restoredBackup.state);
+      updateHeaderLabels();
+      render();
+    } else {
+      playerNames.W = myPlayerName;
+      state.colors.W = myChosenColor;
+      if (state.colors.B === state.colors.W) {
+        state.colors.B = getDistinctFallbackColor(state.colors.W);
+      }
+      state.requireEndTurn = myEndTurnPref;
+      state.autoRoll = myAutoRollPref;
+      state.targetScore = myTargetScorePref;
+      state.variantSequence = getSequenceForMode(myGameModePref);
+      state.variantIdx = 0;
+      state.scoreW = 0;
+      state.scoreB = 0;
+      resetSetTracking();
+      initGame("ROLL_OFF");
+    }
+
+    peer.on("open", () => {
+      if (!restoredBackup) shareInviteLink(code);
+    });
+
+    peer.on("connection", incomingConn => {
+      if (conn && conn.open && !isWaitingForReconnect) {
+        incomingConn.on("open", () => incomingConn.close());
+        return;
+      }
+      conn = incomingConn;
+      setupConn(code);
+    });
+    peer.on("disconnected", () => peer.reconnect());
+  }
+
+  function joinRoomWithCode(rawCode) {
+    ensureAudio();
+    isAiMatch = false;
+    const code = String(rawCode || "").trim().toUpperCase();
+    if (code.length !== 6) return alert(t().enter6CodeAlert);
+
+    const backup = getActiveRoomBackup(code);
+    if (backup && backup.myRole === "W") {
+      hostRoom(code, backup);
+      return;
+    }
+
+    stopDisconnectCountdown();
+    activeRoomCode = code;
+    packetQueue = [];
+    isProcessingPacket = false;
+    if (peer) peer.destroy();
+
+    peer = new Peer(PEER_CONFIG);
+    myRole = "B";
+    document.getElementById("shareBtn").style.display = "none";
+    if (backup && backup.state) {
+      playerNames = cloneState(backup.playerNames || { W: "Host", B: myPlayerName });
+      state = cloneState(backup.state);
+    } else {
+      playerNames.B = myPlayerName;
+    }
+    updateHeaderLabels();
+    render();
+
+    document.getElementById("netStatus").textContent = t().connectingTo(code);
+    peer.on("open", () => {
+      conn = peer.connect("tavli-net-" + code, { reliable: true });
+      setupConn(code, Boolean(backup));
+    });
+    peer.on("disconnected", () => peer.reconnect());
+  }
+
+  function handleOpponentLeft() {
+    if (opponentLeftHandled || state.phase === "SET_OVER") return;
+    opponentLeftHandled = true;
+    isWaitingForReconnect = true;
+
+    saveActiveRoomBackup();
+
+    const oppName = myRole === "W" ? playerNames.B : playerNames.W;
+    const tr = t();
+    document.getElementById("typingIndicator").textContent = "";
+    document.getElementById("netBar").classList.add("left-alert");
+    document.getElementById("netStatus").textContent = tr.oppLeftBanner(oppName, activeRoomCode);
+    setStatus(tr.oppLeftStatus(oppName));
+    appendChatLine(tr.sysLabel, tr.oppLeftChat(oppName, activeRoomCode), "SYS");
+
+    disconnectDeadline = Date.now() + RECONNECT_WINDOW_MS;
+    const pill = document.getElementById("disconnectCountdown");
+    pill.style.display = "inline-block";
+    pill.textContent = formatCountdownMMSS(RECONNECT_WINDOW_MS);
+
+    if (disconnectInterval) clearInterval(disconnectInterval);
+    disconnectInterval = setInterval(() => {
+      const rem = disconnectDeadline - Date.now();
+      if (rem <= 0) {
+        awardForfeitSetWinToConnectedPlayer();
+        return;
+      }
+      pill.textContent = formatCountdownMMSS(rem);
+
+      if (myRole === "B" && isWaitingForReconnect && peer && !peer.destroyed && Math.ceil(rem / 1000) % 4 === 0) {
+        try {
+          const probeConn = peer.connect("tavli-net-" + activeRoomCode, { reliable: true });
+          probeConn.on("open", () => {
+            conn = probeConn;
+            setupConn(activeRoomCode, true);
+          });
+        } catch (_) {}
+      }
+    }, 1000);
+
+    render();
+  }
+
+  function syncDatabaseWithPeer() {
+    if (conn && conn.open) {
+      conn.send({
+        type: "DB_SYNC",
+        snapshot: window.TavliDB.exportPublicSnapshot(),
+        role: myRole,
+        name: myPlayerName
+      });
+    }
+  }
+
+  function setupConn(code, isReconnectingAttempt = false) {
+    conn.on("open", () => {
+      const wasWaiting = isWaitingForReconnect;
+      stopDisconnectCountdown();
+      document.getElementById("netStatus").textContent = t().roomLocked(code);
+
+      const backup = getActiveRoomBackup(code);
+      const hasProgress = (state.scoreW > 0 || state.scoreB > 0 || state.rolled || (state.setGamesLog && state.setGamesLog.length > 0));
+
+      conn.send({
+        type: "HELLO",
+        role: myRole,
+        name: myPlayerName,
+        color: myChosenColor,
+        isReconnect: Boolean(wasWaiting || isReconnectingAttempt || hasProgress || backup),
+        savedState: (wasWaiting || hasProgress) ? cloneState(state) : (backup ? backup.state : null),
+        savedNames: (wasWaiting || hasProgress) ? cloneState(playerNames) : (backup ? backup.playerNames : null),
+        dbSnapshot: window.TavliDB.exportPublicSnapshot()
+      });
+    });
+
+    conn.on("close", () => handleOpponentLeft());
+    conn.on("error", () => handleOpponentLeft());
+
+    conn.on("data", packet => {
+      if (!packet || typeof packet !== "object") return;
+
+      if (packet.type === "BYE") {
+        handleOpponentLeft();
+        return;
+      }
+
+      if (packet.type === "RESIGN_OFFER") {
+        const fromRole = packet.fromRole === "W" ? "W" : "B";
+        const pts = packet.pts === 2 ? 2 : 1;
+        const offererName = fromRole === "W" ? playerNames.W : playerNames.B;
+        pendingResignOffer = { fromRole, pts };
+        playChatSound();
+        document.getElementById("resignRespDesc").textContent = t().resignRespDesc(offererName, pts);
+        document.getElementById("resignRespondModal").style.display = "flex";
+        return;
+      }
+
+      if (packet.type === "RESIGN_RESPONSE") {
+        pendingResignOffer = null;
+        if (!packet.accepted) {
+          const winnerRole = packet.fromRole === "W" ? "B" : "W";
+          const winnerName = winnerRole === "W" ? playerNames.W : playerNames.B;
+          setStatus(t().resignDeclined(winnerName));
+        }
+        return;
+      }
+
+      if (packet.type === "SET_DECISION") {
+        if (packet.decision === "EXIT_MENU") {
+          opponentLeftHandled = true;
+          handleExitToInitialMenu(false);
+        } else if (packet.decision === "PLAY_AGAIN") {
+          peerRematchVote = true;
+          if (myRematchVote) {
+            startNewSetWithSameSettings();
+          }
+        }
+        return;
+      }
+
+      if (packet.type === "DB_SYNC") {
+        if (packet.snapshot) window.TavliDB.mergePublicSnapshot(packet.snapshot);
+        if (packet.name) {
+          const cleanName = String(packet.name).slice(0, 16);
+          if (packet.role === "W") playerNames.W = cleanName;
+          if (packet.role === "B") playerNames.B = cleanName;
+          updateHeaderLabels();
+          render();
+        }
+        return;
+      }
+
+      if (packet.type === "TYPING") {
+        const oppName = myRole === "W" ? playerNames.B : playerNames.W;
+        const ind = document.getElementById("typingIndicator");
+        if (packet.isTyping) {
+          ind.textContent = t().isTyping(oppName);
+          if (remoteTypingTimeout) clearTimeout(remoteTypingTimeout);
+          remoteTypingTimeout = setTimeout(() => {
+            ind.textContent = "";
+          }, 2600);
+        } else {
+          ind.textContent = "";
+        }
+        return;
+      }
+
+      if (packet.type === "HELLO") {
+        stopDisconnectCountdown();
+        if (packet.dbSnapshot) {
+          window.TavliDB.mergePublicSnapshot(packet.dbSnapshot);
+        }
+        const cleanName = String(packet.name || "Friend").slice(0, 16);
+        const reqColor = CHECKER_COLORS.some(c => c.id === packet.color) ? packet.color : "black";
+
+        if (packet.role === "W") {
+          playerNames.W = cleanName;
+          state.colors.W = reqColor;
+        } else if (packet.role === "B") {
+          playerNames.B = cleanName;
+          state.colors.B = (reqColor === state.colors.W) ? getDistinctFallbackColor(state.colors.W) : reqColor;
+        }
+
+        const localHasProgress = (state.scoreW > 0 || state.scoreB > 0 || state.rolled || (state.setGamesLog && state.setGamesLog.length > 0));
+        if (packet.isReconnect && (localHasProgress || packet.savedState)) {
+          if (!localHasProgress && packet.savedState) {
+            state = cloneState(packet.savedState);
+            if (packet.savedNames) playerNames = cloneState(packet.savedNames);
+          }
+          updateHeaderLabels();
+          appendChatLine(t().sysLabel, t().oppRejoinedChat(cleanName), "SYS");
+          setStatus(t().oppRejoinedStatus(cleanName));
+          saveActiveRoomBackup();
+          syncState();
+          syncDatabaseWithPeer();
+          playTurnChime();
+          render();
+          checkTriggerAutoRollOrAI();
+          return;
+        }
+
+        updateHeaderLabels();
+        appendChatLine(t().sysLabel, t().joinedTableChat(cleanName), "SYS");
+
+        if (myRole === "W") {
+          state.scoreW = 0;
+          state.scoreB = 0;
+          state.variantIdx = 0;
+          resetSetTracking();
+          initGame("ROLL_OFF");
+          syncState();
+          syncDatabaseWithPeer();
+          playTurnChime();
+        }
+        render();
+        return;
+      }
+
+      if (packet.type === "CHAT") {
+        const sender = String(packet.sender || "Friend").slice(0, 16);
+        const text = String(packet.text || "").slice(0, 140);
+        const senderRole = packet.role === "W" ? "W" : "B";
+        document.getElementById("typingIndicator").textContent = "";
+        if (text) {
+          playChatSound();
+          appendChatLine(sender, text, senderRole);
+        }
+        return;
+      }
+
+      packetQueue.push(packet);
+      processNextStatePacket();
+    });
+  }
+
+  function processNextStatePacket() {
+    if (isProcessingPacket || packetQueue.length === 0) return;
+    isProcessingPacket = true;
+
+    const packet = packetQueue.shift();
+    const incoming = packet.type === "STATE" ? packet.state : packet;
+
+    if (!incoming || !Array.isArray(incoming.points) || incoming.points.length !== 24) {
+      isProcessingPacket = false;
+      processNextStatePacket();
+      return;
+    }
+
+    if (!Array.isArray(incoming.dice) || incoming.dice.length > 4 || incoming.dice.some(d => !Number.isInteger(d) || d < 1 || d > 6)) {
+      isProcessingPacket = false;
+      processNextStatePacket();
+      return;
+    }
+
+    const prevTurn = state.turn;
+    const animInfo = incoming.lastMoveAnim;
+    const shouldAnimateMove =
+      (incoming.lastAction === "MOVE" || incoming.lastAction === "HIT" || incoming.lastAction === "WIN") &&
+      animInfo &&
+      animInfo.from !== undefined &&
+      animInfo.to !== undefined;
+
+    const finishPacketStep = () => {
+      isProcessingPacket = false;
+      processNextStatePacket();
+    };
+
+    const applyIncomingState = () => {
+      state = incoming;
+      turnHistory = [];
+      selectedFrom = null;
+      validTargets = [];
+      updateHeaderLabels();
+      saveActiveRoomBackup();
+
+      if (state.lastWinEvent) {
+        recordWinEventToDatabase(state.lastWinEvent);
+      }
+
+      if (state.phase === "SET_OVER" && state.lastSetSummary) {
+        clearActiveRoomBackup();
+        playWinFanfare();
+        render();
+        showSetVictoryModal(state.lastSetSummary);
+        finishPacketStep();
+        return;
+      }
+
+      if (state.lastAction === "ROLL_OFF") {
+        const rolledSide = state.rollOff.B !== null ? "B" : "W";
+        animateBoardRollOffDie(rolledSide, () => {
+          if (state.rollOff.W !== null && state.rollOff.B !== null) {
+            resolveRollOffOutcome();
+          } else if (state.turn === myRole) {
+            setStatus(t().rolled1DieYourTurn(playerNames.W, state.rollOff.W));
+            playTurnChime();
+          }
+          finishPacketStep();
+        });
+      } else if (state.lastAction === "ROLL") {
+        animateDiceRoll(2, () => {
+          finishPacketStep();
+        });
+      } else {
+        if (state.lastAction === "MOVE" || state.lastAction === "UNDO") playCheckerClack(false);
+        if (state.lastAction === "HIT") playCheckerClack(true);
+        if (state.lastAction === "WIN") {
+          playWinFanfare();
+          if (state.turn === myRole) {
+            checkTriggerAutoRollOrAI();
+          }
+        }
+        if ((state.lastAction === "END_TURN" || prevTurn !== state.turn) && state.turn === myRole) {
+          playTurnChime();
+          checkTriggerAutoRollOrAI();
+        }
+        render();
+        finishPacketStep();
+      }
+    };
+
+    if (shouldAnimateMove) {
+      animateCheckerTransition(animInfo.from, animInfo.to, animInfo.player, applyIncomingState);
+    } else {
+      applyIncomingState();
+    }
+  }
+
+  function notifyLeavingTab() {
+    saveActiveRoomBackup();
+    if (conn && conn.open) {
+      try { conn.send({ type: "BYE" }); } catch (_) {}
+      try { conn.close(); } catch (_) {}
+    }
+  }
+  window.addEventListener("beforeunload", notifyLeavingTab);
+  window.addEventListener("pagehide", notifyLeavingTab);
+
+  function syncState() {
+    saveActiveRoomBackup();
+    if (conn && conn.open) {
+      conn.send({ type: "STATE", state: cloneState(state) });
+    }
+  }
+
+  function handleChatTyping() {
+    if (!conn || !conn.open) return;
+    const val = document.getElementById("chatInput").value.trim();
+    conn.send({ type: "TYPING", isTyping: val.length > 0 });
+    if (localTypingTimeout) clearTimeout(localTypingTimeout);
+    localTypingTimeout = setTimeout(() => {
+      if (conn && conn.open) conn.send({ type: "TYPING", isTyping: false });
+    }, 1800);
+  }
+
+  function sendChat() {
+    const input = document.getElementById("chatInput");
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = "";
+    if (localTypingTimeout) clearTimeout(localTypingTimeout);
+    const myColorRole = myRole === "B" ? "B" : "W";
+    appendChatLine(myPlayerName, text, myColorRole);
+    if (conn && conn.open) {
+      conn.send({ type: "TYPING", isTyping: false });
+      conn.send({ type: "CHAT", sender: myPlayerName, role: myColorRole, text });
+    }
+  }
+
+  function appendChatLine(sender, text, role = "W") {
+    const box = document.getElementById("chatMessages");
+    const line = document.createElement("div");
+    line.className = "chat-line";
+
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "chat-sender";
+    if (role === "SYS") {
+      nameSpan.style.color = "#81c784";
+    } else {
+      const cId = role === "B" ? state.colors.B : state.colors.W;
+      nameSpan.style.color = getColorMeta(cId).chatHex;
+    }
+    nameSpan.textContent = `${sender}:`;
+
+    const msgSpan = document.createElement("span");
+    msgSpan.textContent = ` ${text}`;
+
+    line.appendChild(nameSpan);
+    line.appendChild(msgSpan);
+    box.appendChild(line);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function shareInviteLink(code) {
+    if (!code) return;
+    const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${code}`;
+    if (navigator.share) {
+      navigator.share({
+        title: "Greek Tavli Online",
+        text: `Room ${code}:`,
+        url: inviteUrl
+      }).catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(inviteUrl);
+      setStatus(t().inviteCopied);
+    }
+  }
+
+  window.addEventListener("DOMContentLoaded", () => {
+    window.TavliDB.onRemoteUpdate(() => {
+      handleNameInputCheck();
+      if (document.getElementById("leaderboardModal").style.display === "flex") {
+        renderLeaderboardModalContent();
+      }
+      if (document.getElementById("profileModal").style.display === "flex") {
+        renderProfileModalContent();
+      }
+    });
+
+    const savedTheme = localStorage.getItem("tavli_theme");
+    if (savedTheme) selectTheme(savedTheme);
+
+    const savedLang = localStorage.getItem("tavli_lang");
+    if (savedLang === "el" || savedLang === "en") {
+      selectLangPref(savedLang);
+    } else {
+      selectLangPref("en");
+    }
+
+    const savedName = localStorage.getItem("tavli_player_name");
+    if (savedName) {
+      myPlayerName = savedName;
+      document.getElementById("playerNameInput").value = savedName;
+    }
+
+    const savedStore = localStorage.getItem("tavli_store_enabled");
+    if (savedStore !== null) {
+      selectStoreDetailsPref(savedStore === "1");
+    } else {
+      selectStoreDetailsPref(true);
+    }
+
+    const savedColor = localStorage.getItem("tavli_player_color");
+    if (savedColor && CHECKER_COLORS.some(c => c.id === savedColor)) {
+      myChosenColor = savedColor;
+    }
+
+    const savedEndTurn = localStorage.getItem("tavli_end_turn_pref");
+    if (savedEndTurn !== null) selectEndTurnPref(savedEndTurn === "1");
+
+    const savedAutoRoll = localStorage.getItem("tavli_auto_roll_pref");
+    if (savedAutoRoll !== null) selectAutoRollPref(savedAutoRoll === "1");
+
+    const savedTarget = parseInt(localStorage.getItem("tavli_target_score"), 10);
+    if (ALLOWED_TARGETS.includes(savedTarget)) myTargetScorePref = savedTarget;
+
+    const savedMode = localStorage.getItem("tavli_game_mode");
+    if (["FULL", "PORTES", "PLAKOTO", "FEVGA"].includes(savedMode)) {
+      selectGameMode(savedMode);
+    }
+
+    const recentBackup = getActiveRoomBackup();
+    if (recentBackup && recentBackup.roomCode) {
+      document.getElementById("modalRoomInput").value = recentBackup.roomCode;
+    }
+
+    handleNameInputCheck();
+    renderColorPicker();
+    renderTargetScorePicker();
+
+    const params = new URLSearchParams(window.location.search);
+    const roomFromUrl = params.get("room");
+    if (roomFromUrl && roomFromUrl.trim().length === 6) {
+      pendingRoomFromUrl = roomFromUrl.trim().toUpperCase();
+      document.getElementById("modalRoomInput").value = pendingRoomFromUrl;
+    }
+
+    showScreen("LANDING");
+  });
+
+  function setStatus(msg) {
+    document.getElementById("statusLog").textContent = msg;
+  }
+
+  // --- 8. UI, Board Roll-Off Renderer & Perspective Rotation ---
+  const PIP_MAP = {
+    1: [4],
+    2: [0, 8],
+    3: [0, 4, 8],
+    4: [0, 2, 6, 8],
+    5: [0, 2, 4, 6, 8],
+    6: [0, 2, 3, 5, 6, 8]
+  };
+
+  function createDieEl(val, tumbling = false, isUsed = false) {
+    const die = document.createElement("div");
+    die.className = "die" + (tumbling ? " tumbling" : "") + (isUsed ? " used" : "");
+    const activeCells = PIP_MAP[val] || [];
+    for (let cell = 0; cell < 9; cell++) {
+      const slot = document.createElement("div");
+      if (activeCells.includes(cell)) slot.className = "pip";
+      die.appendChild(slot);
+    }
+    return die;
+  }
+
+  function renderDiceAreas() {
+    const dc = document.getElementById("diceContainer");
+    const leftZone = document.getElementById("rollOffLeftZone");
+    const rightZone = document.getElementById("rollOffRightZone");
+
+    dc.innerHTML = "";
+    leftZone.innerHTML = "";
+    rightZone.innerHTML = "";
+
+    if (state.phase === "ROLL_OFF") {
+      if (state.rollOff.W !== null) {
+        leftZone.appendChild(createDieEl(state.rollOff.W, false, false));
+      }
+      if (state.rollOff.B !== null) {
+        rightZone.appendChild(createDieEl(state.rollOff.B, false, false));
+      }
+      return;
+    }
+
+    const pair = state.displayDice || [];
+    if (pair.length === 0) return;
+
+    if (pair.length === 2 && pair[0] === pair[1]) {
+      const rem = state.dice.length;
+      const used1 = rem <= 2;
+      const used2 = rem === 0;
+      dc.appendChild(createDieEl(pair[0], false, used1));
+      dc.appendChild(createDieEl(pair[1], false, used2));
+    } else {
+      const remCopy = [...state.dice];
+      pair.forEach(d => {
+        const idx = remCopy.indexOf(d);
+        if (idx > -1) {
+          remCopy.splice(idx, 1);
+          dc.appendChild(createDieEl(d, false, false));
+        } else {
+          dc.appendChild(createDieEl(d, false, true));
+        }
+      });
+    }
+  }
+
+  function render() {
+    const v = currentVariant();
+    const tr = t();
+    document.getElementById("scoreW").textContent = state.scoreW;
+    document.getElementById("scoreB").textContent = state.scoreB;
+    document.getElementById("targetW").textContent = state.targetScore || 7;
+    document.getElementById("targetB").textContent = state.targetScore || 7;
+    document.getElementById("gameTitle").textContent = tr.variants[v] || v;
+
+    const isMyTurn = (myRole === "BOTH" && !isAiMatch) || myRole === state.turn;
+    const cLabelW = getColorMeta(state.colors.W).label;
+    const cLabelB = getColorMeta(state.colors.B).label;
+    const pName = state.turn === "W" ? `${cLabelW} (${playerNames.W})` : `${cLabelB} (${playerNames.B})`;
+    const turnDone = state.phase === "PLAY" && state.rolled && (state.dice.length === 0 || !hasAnyLegalMove(state.turn));
+
+    if (state.phase === "ROLL_OFF") {
+      document.getElementById("turnText").textContent = tr.roll1DieTurn(pName);
+    } else if (!state.rolled) {
+      document.getElementById("turnText").textContent = tr.toRoll(pName);
+    } else if (turnDone && state.requireEndTurn) {
+      document.getElementById("turnText").textContent = tr.tapEndTurn(pName);
+    } else {
+      document.getElementById("turnText").textContent = tr.moveCheckers(pName, state.dice.length);
+    }
+
+    document.getElementById("rollBtn").disabled = state.phase === "SET_OVER" || isWaitingForReconnect || state.rolled || isAnimatingDice || isAnimatingChecker || !isMyTurn;
+    document.getElementById("undoBtn").disabled = state.phase !== "PLAY" || isWaitingForReconnect || !state.rolled || isAnimatingDice || isAnimatingChecker || !isMyTurn || turnHistory.length === 0;
+    document.getElementById("resignBtn").disabled = state.phase !== "PLAY" || isWaitingForReconnect || isAnimatingDice || isAnimatingChecker;
+
+    const endBtn = document.getElementById("endTurnBtn");
+    endBtn.style.display = state.requireEndTurn ? "inline-block" : "none";
+    endBtn.disabled = !turnDone || isWaitingForReconnect || isAnimatingDice || isAnimatingChecker || !isMyTurn;
+    if (!endBtn.disabled && state.requireEndTurn) {
+      endBtn.classList.add("ready-pulse");
+    } else {
+      endBtn.classList.remove("ready-pulse");
+    }
+
+    if (!isAnimatingDice) {
+      renderDiceAreas();
+    }
+
+    const tl = document.getElementById("top-left");
+    const trEl = document.getElementById("top-right");
+    const bl = document.getElementById("bottom-left");
+    const br = document.getElementById("bottom-right");
+    tl.innerHTML = ""; trEl.innerHTML = ""; bl.innerHTML = ""; br.innerHTML = "";
+
+    const isBlackView = (myRole === "B");
+
+    if (!isBlackView) {
+      for (let i = 11; i >= 6; i--) tl.appendChild(renderPoint(i));
+      for (let i = 5; i >= 0; i--) trEl.appendChild(renderPoint(i));
+      for (let i = 12; i <= 17; i++) bl.appendChild(renderPoint(i));
+      for (let i = 18; i <= 23; i++) br.appendChild(renderPoint(i));
+
+      renderBarSlot("barTop", "W");
+      renderBarSlot("barBottom", "B");
+
+      if (v === "PLAKOTO") {
+        renderOffSlot("offTop", "W");
+        renderOffSlot("offBottom", "B");
+      } else {
+        renderOffSlot("offTop", "B");
+        renderOffSlot("offBottom", "W");
+      }
+    } else {
+      if (v === "PORTES" || v === "PLAKOTO") {
+        for (let i = 12; i <= 17; i++) tl.appendChild(renderPoint(i));
+        for (let i = 18; i <= 23; i++) trEl.appendChild(renderPoint(i));
+        for (let i = 11; i >= 6; i--) bl.appendChild(renderPoint(i));
+        for (let i = 5; i >= 0; i--) br.appendChild(renderPoint(i));
+      } else {
+        for (let i = 23; i >= 18; i--) tl.appendChild(renderPoint(i));
+        for (let i = 17; i >= 12; i--) trEl.appendChild(renderPoint(i));
+        for (let i = 0; i <= 5; i++) bl.appendChild(renderPoint(i));
+        for (let i = 6; i <= 11; i++) br.appendChild(renderPoint(i));
+      }
+
+      renderBarSlot("barTop", "B");
+      renderBarSlot("barBottom", "W");
+
+      if (v === "PLAKOTO") {
+        renderOffSlot("offTop", "B");
+        renderOffSlot("offBottom", "W");
+      } else {
+        renderOffSlot("offTop", "W");
+        renderOffSlot("offBottom", "B");
+      }
+    }
+  }
+
+  function renderPoint(idx) {
+    const el = document.createElement("div");
+    el.className = "point";
+    el.setAttribute("data-pt-idx", idx);
+    if (selectedFrom === idx) el.classList.add("selected");
+
+    const targetMove = validTargets.find(m => m.to === idx);
+    if (targetMove) {
+      el.classList.add("valid-dest");
+      const badge = document.createElement("div");
+      badge.className = "dest-badge";
+      badge.textContent = targetMove.badge;
+      el.appendChild(badge);
+    }
+    el.onclick = () => handlePointClick(idx);
+
+    const pt = state.points[idx];
+    if (pt.count > 0) {
+      if (pt.pinned) {
+        const trappedColor = state.colors[pt.pinned];
+        const trappedChk = document.createElement("div");
+        trappedChk.className = `checker clr-${trappedColor} pinned-base`;
+        el.appendChild(trappedChk);
+      }
+
+      const ownerColor = state.colors[pt.owner];
+      const maxVisible = pt.pinned ? 4 : 5;
+      const shown = Math.min(pt.count, maxVisible);
+      for (let c = 0; c < shown; c++) {
+        const chk = document.createElement("div");
+        chk.className = `checker clr-${ownerColor}`;
+        if (pt.pinned && c === 0) {
+          chk.classList.add("capturing-top");
+        }
+        chk.style.zIndex = String(c + 3);
+        if (c === shown - 1 && pt.count > maxVisible) {
+          chk.textContent = pt.count;
+        }
+        el.appendChild(chk);
+      }
+    }
+    return el;
+  }
+
+  function renderBarSlot(elementId, owner) {
+    const el = document.getElementById(elementId);
+    el.innerHTML = "";
+    el.className = "slot-box";
+    el.setAttribute("data-bar-owner", owner);
+    el.onclick = () => selectBar(owner);
+    if (selectedFrom === "BAR" && state.turn === owner) el.classList.add("selected");
+    const count = state.bar[owner];
+    if (count > 0) {
+      const ownerColor = state.colors[owner];
+      const chk = document.createElement("div");
+      chk.className = `checker clr-${ownerColor}`;
+      chk.style.width = "30px";
+      chk.textContent = count;
+      el.appendChild(chk);
+    }
+  }
+
+  function renderOffSlot(elementId, owner) {
+    const el = document.getElementById(elementId);
+    el.innerHTML = "";
+    el.className = "slot-box";
+    el.setAttribute("data-off-owner", owner);
+    const offMove = validTargets.find(m => m.to === "OFF");
+    if (offMove && state.turn === owner) {
+      el.classList.add("valid-dest");
+      const badge = document.createElement("div");
+      badge.className = "dest-badge";
+      badge.textContent = offMove.badge;
+      el.appendChild(badge);
+    }
+    const count = state.off[owner];
+    if (count > 0) {
+      const ownerColor = state.colors[owner];
+      const chk = document.createElement("div");
+      chk.className = `checker clr-${ownerColor}`;
+      chk.style.width = "30px";
+      chk.textContent = count;
+      el.appendChild(chk);
+    }
+  }
+
+  initGame("ROLL_OFF");
+</script>
+</body>
+</html>
