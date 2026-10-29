@@ -1,4 +1,4 @@
-// Greek Tavli Online — UI, Auth, Modals, Audio & Board Renderer (ui.js)
+// Greek Tavli Online — UI, Auth, Modals, 3-Mode Custom Audio & Board Renderer (ui.js)
 
 function t() {
   return I18N[myLang] || I18N.en;
@@ -90,6 +90,26 @@ function selectModalGuestStore(enable) {
   }
 }
 
+// Toggle between Join as Player and Watch as Spectator inside the Join/Invite modal
+function selectJoinParticipationMode(mode) {
+  modalRole = (mode === "SPECTATE") ? "SPECTATE" : "JOIN";
+  const tr = t();
+  const pOpt = document.getElementById("optJoinAsPlayer");
+  const sOpt = document.getElementById("optJoinAsSpectator");
+  if (pOpt && sOpt) {
+    pOpt.classList.toggle("active", modalRole === "JOIN");
+    sOpt.classList.toggle("active", modalRole === "SPECTATE");
+  }
+  const clrSec = document.getElementById("checkerColorSection");
+  if (clrSec) {
+    clrSec.style.display = modalRole === "SPECTATE" ? "none" : "block";
+  }
+  document.getElementById("playConfigTitle").textContent =
+    modalRole === "SPECTATE" ? tr.titleSpectateModal : tr.titleJoinModal;
+  document.getElementById("modalSubmitBtn").textContent =
+    modalRole === "SPECTATE" ? tr.btnSpectateGame : tr.btnJoinGame;
+}
+
 function handleNameInputCheck() {
   if (isAuthenticatedAccount) return;
   const rawName = document.getElementById("playerNameInput").value.trim();
@@ -133,18 +153,21 @@ function updateAdminButtonVisibility() {
   if (btn2) btn2.style.display = isAdmin ? "flex" : "none";
 }
 
-// Persistent Login Session check & UI update (Items 4 & 5)
+// Fixed Persistent Login Session check — Never drops logged-in name even before Firebase finishes pulling!
 function checkPersistentLoginSession() {
   const savedName = localStorage.getItem("tavli_logged_in_name");
   const savedPinHash = localStorage.getItem("tavli_logged_in_pinhash");
   const tr = t();
 
-  if (savedName && window.TavliDB.userExists(savedName)) {
+  if (savedName && savedName.trim()) {
     const u = window.TavliDB.getUser(savedName);
-    if (u && (!savedPinHash || u.pinHash === savedPinHash)) {
-      myPlayerName = u.name;
+    // If user is already in local DB and hash matches, OR if Firebase hasn't finished pulling yet, honor the saved session
+    if (!u || !savedPinHash || !u.pinHash || u.pinHash === savedPinHash) {
+      myPlayerName = u ? u.name : savedName.trim();
       isAuthenticatedAccount = true;
-      document.getElementById("playerNameInput").value = u.name;
+      localStorage.setItem("tavli_player_name", myPlayerName);
+
+      document.getElementById("playerNameInput").value = myPlayerName;
       document.getElementById("playerNameInput").disabled = true;
       document.getElementById("playerPinInput").style.display = "none";
       document.getElementById("storeToggleGroup").style.display = "none";
@@ -152,7 +175,7 @@ function checkPersistentLoginSession() {
       document.getElementById("btnLogoutIdentity").style.display = "inline-block";
 
       const hintEl = document.getElementById("pinPromptHint");
-      hintEl.textContent = tr.verifiedBadge(u.name);
+      hintEl.textContent = tr.verifiedBadge(myPlayerName);
       hintEl.style.color = "#00e676";
       updateAdminButtonVisibility();
       return;
@@ -169,7 +192,9 @@ function checkPersistentLoginSession() {
 
 async function verifyIdentityOnLanding(showSuccessHint = false) {
   ensureAudio();
-  if (isAuthenticatedAccount) return true;
+  if (isAuthenticatedAccount && myPlayerName && myPlayerName !== "Player 1" && myPlayerName !== "Player 2") {
+    return true;
+  }
 
   const tr = t();
   const rawName = document.getElementById("playerNameInput").value.trim() || tr.defaultPlayer;
@@ -235,6 +260,7 @@ function applyLanguageToUI() {
   document.getElementById("btnLogoutIdentity").textContent = tr.btnLogoutIdentity || "Logout";
   document.getElementById("hubBtnHost").textContent = tr.hubBtnHost;
   document.getElementById("hubBtnJoin").textContent = tr.hubBtnJoin;
+  document.getElementById("hubBtnSpectate").textContent = tr.hubBtnSpectate;
   document.getElementById("hubBtnAi").textContent = tr.hubBtnAi;
   document.getElementById("hubBtnProfile").textContent = tr.btnProfile;
   document.getElementById("hubBtnLeaderboard").textContent = tr.btnLeaderboard;
@@ -243,6 +269,10 @@ function applyLanguageToUI() {
   document.getElementById("hubArtCaption").textContent = tr.hubArtCaption;
   document.getElementById("btnConfigBack").textContent = tr.btnBack;
   document.getElementById("menuReturnBtn").textContent = tr.menuReturnBtn;
+
+  document.getElementById("lblJoinModeType").textContent = tr.lblJoinModeType;
+  document.getElementById("optJoinAsPlayer").textContent = tr.optJoinAsPlayer;
+  document.getElementById("optJoinAsSpectator").textContent = tr.optJoinAsSpectator;
 
   const fevgaWarn = document.getElementById("fevgaPrimeWarning");
   if (fevgaWarn && tr.fevgaWarnMsg) fevgaWarn.textContent = tr.fevgaWarnMsg;
@@ -273,6 +303,8 @@ function applyLanguageToUI() {
 
   if (isAiMatch) {
     document.getElementById("netStatus").textContent = tr.netAiMode(myAiDifficulty);
+  } else if (myRole === "SPECTATOR" && activeRoomCode) {
+    document.getElementById("netStatus").textContent = tr.spectatingStatus(activeRoomCode);
   } else if (!activeRoomCode) {
     document.getElementById("netStatus").textContent = tr.netDefault;
   }
@@ -572,8 +604,10 @@ async function saveProfileEdits() {
 
   if (myRole === "B") {
     playerNames.B = myPlayerName;
-  } else {
+    if (state.playerNames) state.playerNames.B = myPlayerName;
+  } else if (myRole === "W" || myRole === "BOTH") {
     playerNames.W = myPlayerName;
+    if (state.playerNames) state.playerNames.W = myPlayerName;
     if (playerNames.B === oldName) playerNames.B = myPlayerName;
   }
   checkPersistentLoginSession();
@@ -949,7 +983,9 @@ function handleImportDBFile(event) {
   reader.readAsText(file);
 }
 
-// --- Web Audio API Sound Synthesizer ---
+// ============================================================================
+// CUSTOM CHECKER SOUND ENGINE (3 DISTINCT VARIATIONS: MOVE, HIT, PIN)
+// ============================================================================
 let audioCtx = null;
 let soundEnabled = true;
 
@@ -966,45 +1002,48 @@ function ensureAudio() {
 function toggleSound() {
   soundEnabled = !soundEnabled;
   document.getElementById("muteBtn").textContent = soundEnabled ? t().soundOn : t().soundOff;
-  if (soundEnabled) playCheckerClack(false);
+  if (soundEnabled) playCheckerClack("MOVE");
 }
 
-function playCheckerClack(isHeavy = false) {
+// mode can be: "MOVE" (open point), "HIT" (Portes blot knock to bar), or "PIN" (Plakoto capture/trap)
+function playCheckerClack(mode = "MOVE") {
   const ctx = ensureAudio();
   if (!ctx) return;
   const now = ctx.currentTime;
 
-  const triggerHit = (offset, pitchBoost) => {
+  const soundType = (mode === true) ? "HIT" : (mode || "MOVE");
+
+  const triggerWoodTap = (offset, startFreq, endFreq, vol, filterFreq) => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = "triangle";
-    osc.frequency.setValueAtTime(195 * pitchBoost, now + offset);
-    osc.frequency.exponentialRampToValueAtTime(58, now + offset + 0.065);
+    osc.frequency.setValueAtTime(startFreq, now + offset);
+    osc.frequency.exponentialRampToValueAtTime(endFreq, now + offset + 0.075);
 
-    gain.gain.setValueAtTime(0.45, now + offset);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.07);
+    gain.gain.setValueAtTime(vol, now + offset);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.08);
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start(now + offset);
-    osc.stop(now + offset + 0.075);
+    osc.stop(now + offset + 0.085);
 
-    const bufferSize = ctx.sampleRate * 0.025;
+    const bufferSize = Math.floor(ctx.sampleRate * 0.028);
     const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = noiseBuffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.32));
     }
     const noise = ctx.createBufferSource();
     noise.buffer = noiseBuffer;
 
     const filter = ctx.createBiquadFilter();
     filter.type = "bandpass";
-    filter.frequency.value = 1450 * pitchBoost;
-    filter.Q.value = 3.2;
+    filter.frequency.value = filterFreq;
+    filter.Q.value = 3.0;
 
     const nGain = ctx.createGain();
-    nGain.gain.setValueAtTime(0.6, now + offset);
-    nGain.gain.exponentialRampToValueAtTime(0.01, now + offset + 0.025);
+    nGain.gain.setValueAtTime(vol * 1.25, now + offset);
+    nGain.gain.exponentialRampToValueAtTime(0.01, now + offset + 0.028);
 
     noise.connect(filter);
     filter.connect(nGain);
@@ -1012,8 +1051,30 @@ function playCheckerClack(isHeavy = false) {
     noise.start(now + offset);
   };
 
-  triggerHit(0, 1.0);
-  if (isHeavy) triggerHit(0.055, 1.18);
+  if (soundType === "HIT") {
+    // 1. Portes Blot Hit: Loud, sharp high-impact double-clack knock
+    triggerWoodTap(0, 260, 72, 0.68, 1850);
+    triggerWoodTap(0.055, 330, 90, 0.78, 2250);
+  } else if (soundType === "PIN") {
+    // 2. Plakoto Checker Pin/Capture: Deep, heavy locking double-thud + low slide
+    triggerWoodTap(0, 175, 48, 0.65, 1050);
+    triggerWoodTap(0.075, 130, 38, 0.80, 760);
+
+    const lockOsc = ctx.createOscillator();
+    const lockGain = ctx.createGain();
+    lockOsc.type = "sine";
+    lockOsc.frequency.setValueAtTime(110, now + 0.05);
+    lockOsc.frequency.exponentialRampToValueAtTime(42, now + 0.21);
+    lockGain.gain.setValueAtTime(0.42, now + 0.05);
+    lockGain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+    lockOsc.connect(lockGain);
+    lockGain.connect(ctx.destination);
+    lockOsc.start(now + 0.05);
+    lockOsc.stop(now + 0.23);
+  } else {
+    // 3. Normal Move to Open Point: Crisp single wooden tap
+    triggerWoodTap(0, 195, 58, 0.42, 1450);
+  }
 }
 
 function playDiceRattle() {
@@ -1169,19 +1230,27 @@ function renderDiceAreas() {
 function render() {
   const v = currentVariant();
   const tr = t();
+
+  // Always keep playerNames synchronized with state.playerNames if present
+  if (state.playerNames) {
+    if (state.playerNames.W) playerNames.W = state.playerNames.W;
+    if (state.playerNames.B) playerNames.B = state.playerNames.B;
+  }
+  updateHeaderLabels();
+
   document.getElementById("scoreW").textContent = state.scoreW;
   document.getElementById("scoreB").textContent = state.scoreB;
   document.getElementById("targetW").textContent = state.targetScore || 7;
   document.getElementById("targetB").textContent = state.targetScore || 7;
   document.getElementById("gameTitle").textContent = tr.variants[v] || v;
 
-  const isMyTurn = (myRole === "BOTH" && !isAiMatch) || myRole === state.turn;
+  const isSpectator = (myRole === "SPECTATOR");
+  const isMyTurn = !isSpectator && ((myRole === "BOTH" && !isAiMatch) || myRole === state.turn);
   const cLabelW = getColorMeta(state.colors.W).label;
   const cLabelB = getColorMeta(state.colors.B).label;
   const pName = state.turn === "W" ? `${cLabelW} (${playerNames.W})` : `${cLabelB} (${playerNames.B})`;
   const turnDone = state.phase === "PLAY" && state.rolled && (state.dice.length === 0 || !hasAnyLegalMove(state.turn));
 
-  // Item 3: Fevga temporary 6-block warning banner
   const fevgaWarn = document.getElementById("fevgaPrimeWarning");
   if (fevgaWarn) {
     if (v === "FEVGA" && state.phase === "PLAY" && state.rolled && isFevgaStartingPrimeOccupied(state, state.turn) && state.dice.length > 0) {
@@ -1201,17 +1270,21 @@ function render() {
     document.getElementById("turnText").textContent = tr.moveCheckers(pName, state.dice.length);
   }
 
-  // Item 2: Hide Roll Dice button during active play when Auto-Roll is enabled
   const rollBtn = document.getElementById("rollBtn");
-  rollBtn.style.display = (state.autoRoll && state.phase === "PLAY") ? "none" : "inline-block";
-  rollBtn.disabled = state.phase === "SET_OVER" || isWaitingForReconnect || state.rolled || isAnimatingDice || isAnimatingChecker || !isMyTurn;
+  rollBtn.style.display = (isSpectator || (state.autoRoll && state.phase === "PLAY")) ? "none" : "inline-block";
+  rollBtn.disabled = isSpectator || state.phase === "SET_OVER" || isWaitingForReconnect || state.rolled || isAnimatingDice || isAnimatingChecker || !isMyTurn;
 
-  document.getElementById("undoBtn").disabled = state.phase !== "PLAY" || isWaitingForReconnect || !state.rolled || isAnimatingDice || isAnimatingChecker || !isMyTurn || turnHistory.length === 0;
-  document.getElementById("resignBtn").disabled = state.phase !== "PLAY" || isWaitingForReconnect || isAnimatingDice || isAnimatingChecker;
+  const undoBtn = document.getElementById("undoBtn");
+  undoBtn.style.display = isSpectator ? "none" : "inline-block";
+  undoBtn.disabled = isSpectator || state.phase !== "PLAY" || isWaitingForReconnect || !state.rolled || isAnimatingDice || isAnimatingChecker || !isMyTurn || turnHistory.length === 0;
+
+  const resignBtn = document.getElementById("resignBtn");
+  resignBtn.style.display = isSpectator ? "none" : "inline-block";
+  resignBtn.disabled = isSpectator || state.phase !== "PLAY" || isWaitingForReconnect || isAnimatingDice || isAnimatingChecker;
 
   const endBtn = document.getElementById("endTurnBtn");
-  endBtn.style.display = state.requireEndTurn ? "inline-block" : "none";
-  endBtn.disabled = !turnDone || isWaitingForReconnect || isAnimatingDice || isAnimatingChecker || !isMyTurn || isFevgaStartingPrimeOccupied(state, state.turn);
+  endBtn.style.display = (!isSpectator && state.requireEndTurn) ? "inline-block" : "none";
+  endBtn.disabled = isSpectator || !turnDone || isWaitingForReconnect || isAnimatingDice || isAnimatingChecker || !isMyTurn || isFevgaStartingPrimeOccupied(state, state.turn);
   if (!endBtn.disabled && state.requireEndTurn) {
     endBtn.classList.add("ready-pulse");
   } else {

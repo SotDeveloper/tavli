@@ -267,17 +267,17 @@
     .hub-menu-col {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 9px;
       justify-content: center;
     }
     .hub-btn-primary {
       width: 100%;
-      padding: 13px 16px;
+      padding: 12px 16px;
       border-radius: 11px;
       border: 2px solid rgba(255,255,255,0.12);
       background: linear-gradient(135deg, var(--wood-mid), rgba(0,0,0,0.45));
       color: #fff;
-      font-size: 0.96rem;
+      font-size: 0.94rem;
       font-weight: 800;
       cursor: pointer;
       display: flex;
@@ -295,6 +295,10 @@
       background: linear-gradient(135deg, var(--accent), #f57c00);
       color: #111;
       border-color: #ffe082;
+    }
+    .hub-btn-primary.spectate-btn {
+      background: linear-gradient(135deg, #00897b, #004d40);
+      border-color: #4db6ac;
     }
     .hub-secondary-grid {
       display: grid;
@@ -557,10 +561,11 @@
     .btn-exit-menu { flex: 1; padding: 11px; border-radius: 8px; border: none; background: #e53935; color: #fff; font-weight: 800; font-size: 0.9rem; cursor: pointer; }
     .btn-play-again:disabled { opacity: 0.55; cursor: not-allowed; }
 
-    /* Top Multiplayer Bar & 5-Minute Disconnect Countdown Badge */
+    /* Top Multiplayer Bar, Spectator Badge & 5-Minute Disconnect Countdown Badge */
     .net-bar { width: 100%; background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 8px; padding: 6px 10px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.78rem; transition: background 0.25s ease; }
     .net-bar.left-alert { background: #b71c1c; border-color: #ff8a80; color: #fff; }
     .countdown-pill { background: #111; color: #ffd54f; font-weight: 800; padding: 2px 8px; border-radius: 6px; margin-left: 6px; font-variant-numeric: tabular-nums; display: inline-block; border: 1px solid #ffd54f; }
+    .spectator-pill { background: #00695c; color: #e0f2f1; font-weight: 800; padding: 2px 8px; border-radius: 6px; margin-left: 6px; font-size: 0.72rem; display: none; border: 1px solid #4db6ac; }
     .net-controls { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
     .btn-sm { padding: 5px 9px; font-size: 0.75rem; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; background: var(--accent); color: #111; }
     .btn-share { background: #00e676; color: #111; display: none; }
@@ -760,6 +765,11 @@
             <span>➔</span>
           </button>
 
+          <button class="hub-btn-primary spectate-btn" onclick="openPlaySetupModal('SPECTATE')">
+            <span>👁️ <span id="hubBtnSpectate">Watch Game (Spectator)</span></span>
+            <span>➔</span>
+          </button>
+
           <button class="hub-btn-primary" onclick="openPlaySetupModal('AI')">
             <span>🤖 <span id="hubBtnAi">Play Against AI</span></span>
             <span>➔</span>
@@ -846,7 +856,7 @@
   </div>
 
   <!-- ==========================================================================
-       PLAY CONFIGURATION POP-UP MODAL (OPENS WHEN CLICKING HOST, JOIN, OR AI)
+       PLAY CONFIGURATION POP-UP MODAL (OPENS FOR HOST, JOIN, SPECTATE, OR AI)
        ========================================================================== -->
   <div class="modal-overlay" id="playConfigModal" style="display:none;">
     <div class="modal-card">
@@ -864,8 +874,20 @@
         <div class="auth-error" id="modalAuthErrorBox"></div>
       </div>
 
-      <label class="sec-label" id="lblCheckerColor">Your Checker Colour</label>
-      <div class="color-grid" id="colorGrid"></div>
+      <!-- Join Mode Role Selector: Play vs Watch as Spectator (Shown in JOIN / SPECTATE / Invite Link) -->
+      <div id="joinRoleToggleSection" style="display:none; margin-bottom:6px;">
+        <label class="sec-label" id="lblJoinModeType">Participation Mode</label>
+        <div class="toggle-row">
+          <div class="toggle-opt active" id="optJoinAsPlayer" onclick="selectJoinParticipationMode('JOIN')">🤝 Join as Player</div>
+          <div class="toggle-opt" id="optJoinAsSpectator" onclick="selectJoinParticipationMode('SPECTATE')">👁️ Watch as Spectator</div>
+        </div>
+      </div>
+
+      <!-- Checker Colour Section (Hidden when joining as Spectator) -->
+      <div id="checkerColorSection">
+        <label class="sec-label" id="lblCheckerColor">Your Checker Colour</label>
+        <div class="color-grid" id="colorGrid"></div>
+      </div>
 
       <!-- AI-Only Difficulty Options -->
       <div id="aiOnlySettings" style="display:none;">
@@ -877,9 +899,9 @@
         </div>
       </div>
 
-      <!-- Join-Only Room Code Input -->
+      <!-- Join / Spectate Room Code Input -->
       <div id="joinOnlySettings" style="display:none;">
-        <label class="sec-label" id="lblRoomCode" for="modalRoomInput">Room Code (Join or Reconnect)</label>
+        <label class="sec-label" id="lblRoomCode" for="modalRoomInput">Room Code (Join, Reconnect, or Watch)</label>
         <input type="text" id="modalRoomInput" placeholder="6-CHAR CODE" maxlength="6" style="text-transform:uppercase; letter-spacing:2px; font-weight:bold;" onkeydown="if(event.key==='Enter') confirmStartSelectedMode()" />
       </div>
 
@@ -1061,10 +1083,11 @@
     <div class="left-spacer"></div>
 
     <div class="main-column">
-      <!-- Online P2P, Reconnect Countdown & Audio Bar -->
+      <!-- Online P2P, Spectator Count, Reconnect Countdown & Audio Bar -->
       <div class="net-bar" id="netBar">
         <div style="display:flex; align-items:center; flex-wrap:wrap;">
           <span id="netStatus">Room Active</span>
+          <span class="spectator-pill" id="spectatorCountBadge">👁️ 0</span>
           <span class="countdown-pill" id="disconnectCountdown" style="display:none;">05:00</span>
         </div>
         <div class="net-controls">
@@ -1156,9 +1179,8 @@
   </div>
 
   <!-- Small Version Label at Bottom-Right -->
-  <div style="position:fixed; bottom:4px; right:8px; font-size:0.65rem; color:rgba(255,255,255,0.45); pointer-events:none; z-index:9999; font-weight:600;">v17</div>
+  <div style="position:fixed; bottom:4px; right:8px; font-size:0.65rem; color:rgba(255,255,255,0.45); pointer-events:none; z-index:9999; font-weight:600;">v18</div>
 
-  
   <script src="i18n.js"></script>
   <script src="ui.js"></script>
   <script src="app.js"></script>

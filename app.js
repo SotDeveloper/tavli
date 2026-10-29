@@ -1,4 +1,4 @@
-// Greek Tavli Online — Core Game Engine, Fevga Rules, AI & WebRTC Multiplayer (app.js)
+// Greek Tavli Online — Core Game Engine, Fevga Rules, AI, Spectator Relay & WebRTC Multiplayer (app.js — v18)
 
 const PEER_CONFIG = {
   config: {
@@ -34,6 +34,8 @@ let state = {
   requireEndTurn: true,
   autoRoll: false,
   colors: { W: "white", B: "black" },
+  playerNames: { W: "Player 1", B: "Player 2" },
+  spectatorCount: 0,
   points: [],
   bar: { W: 0, B: 0 },
   off: { W: 0, B: 0 },
@@ -59,8 +61,9 @@ let isAnimatingChecker = false;
 let lastPointTap = { idx: -1, time: 0 };
 
 let peer = null;
-let conn = null;
-let myRole = "BOTH";
+let conn = null;             // Primary opponent connection (W <-> B) or Spectator -> Host connection
+let spectatorConns = [];     // Active spectator connections managed by Host (W)
+let myRole = "BOTH";         // 'BOTH' | 'W' | 'B' | 'SPECTATOR'
 let activeRoomCode = "";
 let opponentLeftHandled = false;
 let localTypingTimeout = null;
@@ -69,14 +72,33 @@ let remoteTypingTimeout = null;
 let packetQueue = [];
 let isProcessingPacket = false;
 
+function updateSpectatorBadge(count) {
+  const badge = document.getElementById("spectatorCountBadge");
+  if (!badge) return;
+  const n = Math.max(0, parseInt(count, 10) || 0);
+  state.spectatorCount = n;
+  if (n > 0 || myRole === "SPECTATOR") {
+    badge.style.display = "inline-block";
+    badge.textContent = `👁️ ${Math.max(n, myRole === "SPECTATOR" ? 1 : 0)}`;
+  } else {
+    badge.style.display = "none";
+  }
+}
+
 async function openPlaySetupModal(role) {
   const tr = t();
-  const guestAuthBox = document.getElementById("inviteGuestAuthSection");
-  const isJoinViaLink = (role === "JOIN" && pendingRoomFromUrl && !isAuthenticatedAccount);
+  checkPersistentLoginSession();
 
-  // Item 6: If joining via invite link and not already logged in on this browser, prompt for Name & PIN
-  if (isJoinViaLink) {
+  const guestAuthBox = document.getElementById("inviteGuestAuthSection");
+  const isJoinOrSpectate = (role === "JOIN" || role === "SPECTATE");
+  const isUnloggedInvite = (isJoinOrSpectate && pendingRoomFromUrl && !isAuthenticatedAccount);
+
+  if (isUnloggedInvite) {
     guestAuthBox.style.display = "block";
+    const savedLocalName = localStorage.getItem("tavli_player_name");
+    if (savedLocalName && savedLocalName !== "Player 1" && savedLocalName !== "Player 2") {
+      document.getElementById("modalGuestNameInput").value = savedLocalName;
+    }
   } else {
     guestAuthBox.style.display = "none";
     const ok = await verifyIdentityOnLanding(false);
@@ -86,19 +108,26 @@ async function openPlaySetupModal(role) {
   }
 
   modalRole = role;
+  const joinRoleToggle = document.getElementById("joinRoleToggleSection");
+  const clrSec = document.getElementById("checkerColorSection");
+
   if (role === "HOST") {
     document.getElementById("playConfigTitle").textContent = tr.titleHostModal;
     document.getElementById("modalSubmitBtn").textContent = tr.btnStartGame;
-  } else if (role === "JOIN") {
-    document.getElementById("playConfigTitle").textContent = tr.titleJoinModal;
-    document.getElementById("modalSubmitBtn").textContent = tr.btnJoinGame;
+    if (joinRoleToggle) joinRoleToggle.style.display = "none";
+    if (clrSec) clrSec.style.display = "block";
+  } else if (role === "JOIN" || role === "SPECTATE") {
+    if (joinRoleToggle) joinRoleToggle.style.display = "block";
+    selectJoinParticipationMode(role);
   } else {
     document.getElementById("playConfigTitle").textContent = tr.titleAiModal;
     document.getElementById("modalSubmitBtn").textContent = tr.btnStartAi;
+    if (joinRoleToggle) joinRoleToggle.style.display = "none";
+    if (clrSec) clrSec.style.display = "block";
   }
 
   document.getElementById("hostOnlySettings").style.display = (role === "HOST" || role === "AI") ? "block" : "none";
-  document.getElementById("joinOnlySettings").style.display = role === "JOIN" ? "block" : "none";
+  document.getElementById("joinOnlySettings").style.display = (role === "JOIN" || role === "SPECTATE") ? "block" : "none";
   document.getElementById("aiOnlySettings").style.display = role === "AI" ? "block" : "none";
 
   renderColorPicker();
@@ -114,7 +143,9 @@ async function confirmStartSelectedMode() {
   ensureAudio();
   const tr = t();
 
-  // Item 6: Authenticate or set guest name from the Invite Modal if shown
+  // Ensure persistent login name is loaded first
+  checkPersistentLoginSession();
+
   const guestAuthBox = document.getElementById("inviteGuestAuthSection");
   if (guestAuthBox && guestAuthBox.style.display === "block") {
     const gName = document.getElementById("modalGuestNameInput").value.trim() || tr.defaultPlayer;
@@ -133,6 +164,7 @@ async function confirmStartSelectedMode() {
       isAuthenticatedAccount = true;
       localStorage.setItem("tavli_logged_in_name", myPlayerName);
       localStorage.setItem("tavli_logged_in_pinhash", auth.user.pinHash);
+      checkPersistentLoginSession();
     } else {
       await window.TavliDB.pullFromServer();
       if (window.TavliDB.userExists(gName)) {
@@ -145,20 +177,27 @@ async function confirmStartSelectedMode() {
       isAuthenticatedAccount = false;
     }
     localStorage.setItem("tavli_player_name", myPlayerName);
+  } else if (!isAuthenticatedAccount) {
+    const landingInputName = document.getElementById("playerNameInput").value.trim();
+    if (landingInputName) {
+      myPlayerName = landingInputName;
+      localStorage.setItem("tavli_player_name", myPlayerName);
+    }
   }
 
   localStorage.setItem("tavli_player_color", myChosenColor);
 
-  if (modalRole === "JOIN") {
+  if (modalRole === "JOIN" || modalRole === "SPECTATE") {
     const joinCode = (pendingRoomFromUrl || document.getElementById("modalRoomInput").value || "").trim().toUpperCase();
     if (joinCode.length !== 6) {
       alert(tr.enter6CodeAlert);
       return;
     }
+    const asSpectator = (modalRole === "SPECTATE");
     pendingRoomFromUrl = null;
     closePlayConfigModal();
     showScreen("GAME");
-    joinRoomWithCode(joinCode);
+    joinRoomWithCode(joinCode, asSpectator);
     return;
   }
 
@@ -177,6 +216,7 @@ async function confirmStartSelectedMode() {
     myRole = "W";
     playerNames.W = myPlayerName;
     playerNames.B = `AI (${myAiDifficulty})`;
+    state.playerNames = { W: playerNames.W, B: playerNames.B };
     state.colors.W = myChosenColor;
     state.colors.B = getDistinctFallbackColor(state.colors.W);
     state.requireEndTurn = myEndTurnPref;
@@ -189,13 +229,15 @@ async function confirmStartSelectedMode() {
     resetSetTracking();
     document.getElementById("shareBtn").style.display = "none";
     document.getElementById("netStatus").textContent = tr.netAiMode(myAiDifficulty);
+    updateSpectatorBadge(0);
     initGame("ROLL_OFF");
   }
 }
 
 function saveActiveRoomBackup() {
-  if (!activeRoomCode || isAiMatch || state.phase === "SET_OVER") return;
+  if (!activeRoomCode || isAiMatch || myRole === "SPECTATOR" || state.phase === "SET_OVER") return;
   try {
+    state.playerNames = { W: playerNames.W, B: playerNames.B };
     const backup = {
       roomCode: activeRoomCode,
       myRole,
@@ -262,14 +304,17 @@ function getMostRolledComboStr(countsMap) {
   return `${combo} (${count}x)`;
 }
 
-// Item 7: Strictly records +1 game win / +1 game played per finished board game (even if Diplo +2 match points)
+// Strictly records +1 game win / +1 game played per finished board game (using authoritative names)
 function recordWinEventToDatabase(winEv) {
-  if (isAiMatch) return;
+  if (isAiMatch || myRole === "SPECTATOR") return;
   if (!winEv || !winEv.id || winEv.id === lastRecordedWinEventId) return;
   lastRecordedWinEventId = winEv.id;
 
-  const wName = playerNames.W;
-  const bName = playerNames.B;
+  const wName = (winEv.nameW || (state.playerNames && state.playerNames.W) || playerNames.W || "Player 1").trim();
+  const bName = (winEv.nameB || (state.playerNames && state.playerNames.B) || playerNames.B || "Player 2").trim();
+  playerNames.W = wName;
+  playerNames.B = bName;
+
   const wWon = winEv.winner === "W";
 
   if (!winEv.forfeitSetOnly) {
@@ -349,6 +394,7 @@ function initGame(starter = "ROLL_OFF") {
   state.bar = { W: 0, B: 0 };
   state.off = { W: 0, B: 0 };
   state.fevgaPassed = { W: false, B: false };
+  state.playerNames = { W: playerNames.W, B: playerNames.B };
   state.lastAction = "INIT";
   state.lastMoveAnim = null;
   state.points = Array.from({ length: 24 }, () => ({ owner: null, count: 0, pinned: null }));
@@ -379,7 +425,7 @@ function setPt(idx, owner, count) {
 function checkTriggerAutoRollOrAI() {
   if (autoRollTimer) { clearTimeout(autoRollTimer); autoRollTimer = null; }
   if (aiTurnTimer) { clearTimeout(aiTurnTimer); aiTurnTimer = null; }
-  if (state.phase === "SET_OVER" || isWaitingForReconnect) return;
+  if (state.phase === "SET_OVER" || isWaitingForReconnect || myRole === "SPECTATOR") return;
 
   if (isAiMatch && state.turn === "B" && !state.rolled && !isAnimatingDice && !isAnimatingChecker) {
     aiTurnTimer = setTimeout(() => {
@@ -402,6 +448,7 @@ function checkTriggerAutoRollOrAI() {
 }
 
 function handleRoll(triggeredByAi = false) {
+  if (myRole === "SPECTATOR") return;
   if (state.phase === "SET_OVER" || isWaitingForReconnect || state.rolled || isAnimatingDice || isAnimatingChecker) return;
   if (!triggeredByAi && myRole !== "BOTH" && myRole !== state.turn) return;
 
@@ -461,8 +508,7 @@ function handleRoll(triggeredByAi = false) {
   });
 }
 
-// --- Item 3: Fevga Temporary 6-Block Rule ---
-// Checks if all 6 starting places of `player` are currently occupied in Fevga
+// --- Fevga Temporary 6-Block Rule ---
 function isFevgaStartingPrimeOccupied(s, player) {
   const seq = s.variantSequence && s.variantSequence.length ? s.variantSequence : ["PORTES", "PLAKOTO", "FEVGA"];
   const v = seq[s.variantIdx % seq.length];
@@ -472,7 +518,6 @@ function isFevgaStartingPrimeOccupied(s, player) {
   return startQuad.every(qIdx => s.points[qIdx].owner === player && s.points[qIdx].count > 0);
 }
 
-// Checks if `stateAfterMove` can eventually finish the turn with at least 1 starting place unblocked
 function canUnblockFevgaPrimeBeforeTurnEnd(stateAfterMove, player) {
   if (!isFevgaStartingPrimeOccupied(stateAfterMove, player)) return true;
   if (stateAfterMove.dice.length === 0) return false;
@@ -545,7 +590,6 @@ function getRawSingleMovesIgnoringPrime(s, origin, player) {
   return moves;
 }
 
-// Allows temporarily blocking all 6 starting places in Fevga ONLY IF a remaining die can unblock one of them!
 function getSingleStepMovesFrom(s, origin, player) {
   const rawMoves = getRawSingleMovesIgnoringPrime(s, origin, player);
   const seq = s.variantSequence && s.variantSequence.length ? s.variantSequence : ["PORTES", "PLAKOTO", "FEVGA"];
@@ -569,6 +613,7 @@ function isReadyToBearOffState(s, player, variant, path) {
   return true;
 }
 
+// Returns distinct flags for Portes Blot Hit (wasHit) vs Plakoto Capture/Pin (wasPin)
 function applySingleStepToState(s, step) {
   const { from, to, die } = step;
   const player = s.turn;
@@ -576,7 +621,8 @@ function applySingleStepToState(s, step) {
   const seq = s.variantSequence && s.variantSequence.length ? s.variantSequence : ["PORTES", "PLAKOTO", "FEVGA"];
   const v = seq[s.variantIdx % seq.length];
   const path = getPath(v, player);
-  let wasHitOrPin = false;
+  let wasHit = false;
+  let wasPin = false;
 
   if (from === "BAR") {
     s.bar[player]--;
@@ -602,12 +648,12 @@ function applySingleStepToState(s, step) {
       dst.owner = player;
       dst.count = 1;
       s.bar[opp]++;
-      wasHitOrPin = true;
+      wasHit = true;
     } else if (v === "PLAKOTO" && dst.owner === opp && dst.count === 1) {
       dst.pinned = opp;
       dst.owner = player;
       dst.count = 1;
-      wasHitOrPin = true;
+      wasPin = true;
     } else {
       dst.owner = player;
       dst.count++;
@@ -630,7 +676,7 @@ function applySingleStepToState(s, step) {
     }
   }
 
-  return { wasHitOrPin, manaWin, bearOffWin: s.off[player] === 15 };
+  return { wasHit, wasPin, wasHitOrPin: (wasHit || wasPin), manaWin, bearOffWin: s.off[player] === 15 };
 }
 
 function getMovesFrom(origin, player) {
@@ -948,6 +994,7 @@ function getSlotOrPointElement(loc, player) {
 }
 
 function tryBearOffFromPoint(idx) {
+  if (myRole === "SPECTATOR") return false;
   if (state.phase !== "PLAY" || isWaitingForReconnect || !state.rolled || isAnimatingDice || isAnimatingChecker) return false;
   if (myRole !== "BOTH" && myRole !== state.turn) return false;
 
@@ -965,6 +1012,7 @@ function tryBearOffFromPoint(idx) {
 }
 
 function selectBar(player) {
+  if (myRole === "SPECTATOR") return;
   if (state.phase !== "PLAY" || isWaitingForReconnect || !state.rolled || isAnimatingDice || isAnimatingChecker || state.turn !== player) return;
   if (myRole !== "BOTH" && myRole !== state.turn) return;
   selectedFrom = "BAR";
@@ -973,6 +1021,7 @@ function selectBar(player) {
 }
 
 function handlePointClick(idx) {
+  if (myRole === "SPECTATOR") return;
   if (state.phase !== "PLAY" || isWaitingForReconnect || !state.rolled || isAnimatingDice || isAnimatingChecker) return;
   if (myRole !== "BOTH" && myRole !== state.turn) return;
 
@@ -1001,12 +1050,14 @@ function handlePointClick(idx) {
 }
 
 function attemptBearOff() {
+  if (myRole === "SPECTATOR") return;
   if (state.phase !== "PLAY" || isWaitingForReconnect || !state.rolled || isAnimatingDice || isAnimatingChecker || selectedFrom === null) return;
   if (myRole !== "BOTH" && myRole !== state.turn) return;
   const move = validTargets.find(m => m.to === "OFF");
   if (move) executeMoveSequence(move.steps);
 }
 
+// Plays the 3 distinct custom checker sounds ("MOVE", "HIT", or "PIN") and broadcasts action type to peers/spectators
 function executeMoveSequence(steps, onSequenceDone = null) {
   const startOrigin = steps[0].from;
   const finalDest = steps[steps.length - 1].to;
@@ -1020,19 +1071,22 @@ function executeMoveSequence(steps, onSequenceDone = null) {
 
     const player = state.turn;
     const opp = player === "W" ? "B" : "W";
-    let anyHitOrPin = false;
+    let anyHit = false;
+    let anyPin = false;
     let manaWin = false;
     let bearOffWin = false;
 
     for (const step of steps) {
       const outcome = applySingleStepToState(state, step);
-      if (outcome.wasHitOrPin) anyHitOrPin = true;
+      if (outcome.wasHit) anyHit = true;
+      if (outcome.wasPin) anyPin = true;
       if (outcome.manaWin) { manaWin = true; break; }
       if (outcome.bearOffWin) { bearOffWin = true; break; }
     }
 
-    playCheckerClack(anyHitOrPin);
-    state.lastAction = anyHitOrPin ? "HIT" : "MOVE";
+    const soundAction = anyPin ? "PIN" : (anyHit ? "HIT" : "MOVE");
+    playCheckerClack(soundAction);
+    state.lastAction = soundAction;
     state.lastMoveAnim = { from: startOrigin, to: finalDest, player };
 
     if (manaWin) {
@@ -1072,6 +1126,7 @@ function executeMoveSequence(steps, onSequenceDone = null) {
 }
 
 function handleUndo() {
+  if (myRole === "SPECTATOR") return;
   if (turnHistory.length === 0 || isWaitingForReconnect || isAnimatingDice || isAnimatingChecker) return;
   if (myRole !== "BOTH" && myRole !== state.turn) return;
 
@@ -1080,13 +1135,14 @@ function handleUndo() {
   state.lastMoveAnim = null;
   selectedFrom = null;
   validTargets = [];
-  playCheckerClack(false);
+  playCheckerClack("MOVE");
   setStatus(t().moveUndone);
   syncState();
   render();
 }
 
 function handleEndTurn(forcedOrAuto = false) {
+  if (myRole === "SPECTATOR") return;
   if (!state.rolled || isWaitingForReconnect || isAnimatingDice || isAnimatingChecker) return;
   if (!forcedOrAuto && myRole !== "BOTH" && myRole !== state.turn) return;
   if (!forcedOrAuto && state.dice.length > 0 && hasAnyLegalMove(state.turn)) return;
@@ -1138,6 +1194,8 @@ function finishGame(winner, pts, reason, winningMoveAnim = null) {
     winEv = {
       id: Date.now() + "-" + cryptoDie(),
       winner,
+      nameW: playerNames.W,
+      nameB: playerNames.B,
       variant: playedVariant,
       matchOver: isMatchOver
     };
@@ -1182,7 +1240,7 @@ function finishGame(winner, pts, reason, winningMoveAnim = null) {
 }
 
 function openResignOfferModal() {
-  if (state.phase !== "PLAY" || isWaitingForReconnect) return;
+  if (myRole === "SPECTATOR" || state.phase !== "PLAY" || isWaitingForReconnect) return;
   document.getElementById("resignOfferModal").style.display = "flex";
 }
 
@@ -1191,6 +1249,7 @@ function closeResignOfferModal() {
 }
 
 function sendResignOffer(pts) {
+  if (myRole === "SPECTATOR") return;
   closeResignOfferModal();
   const validPts = pts === 2 ? 2 : 1;
   const resigningRole = myRole === "BOTH" ? state.turn : myRole;
@@ -1328,6 +1387,22 @@ function renderSetVictoryModalBody() {
     </div>
   ` : "";
 
+  const isSpectator = (myRole === "SPECTATOR");
+  const actionButtonsHtml = isSpectator
+    ? `<div class="set-Action-row">
+         <button class="btn-exit-menu" onclick="handleExitToInitialMenu(true)">${tr.btnExitMenu}</button>
+       </div>`
+    : `<p style="font-size:0.8rem; color:#d7ccc8; text-align:center; margin-top:8px;">
+         ${escapeHtml(tr.setPlayAgainPrompt)}
+       </p>
+       <div id="rematchWaitMsg" style="font-size:0.78rem; color:var(--valid); text-align:center; font-weight:bold; min-height:18px; margin-top:4px;">
+         ${myRematchVote ? escapeHtml(tr.waitingOpponentRematch) : ""}
+       </div>
+       <div class="set-Action-row">
+         <button class="btn-play-again" id="btnRematchConfirm" onclick="handlePlayAgainSameSettings()" ${myRematchVote ? "disabled" : ""}>${tr.btnPlayAgain}</button>
+         <button class="btn-exit-menu" onclick="handleExitToInitialMenu(true)">${tr.btnExitMenu}</button>
+       </div>`;
+
   const content = document.getElementById("setSummaryContent");
   content.innerHTML = `
     <div class="trophy-banner">
@@ -1364,17 +1439,7 @@ function renderSetVictoryModalBody() {
       </div>
     </div>
 
-    <p style="font-size:0.8rem; color:#d7ccc8; text-align:center; margin-top:8px;">
-      ${escapeHtml(tr.setPlayAgainPrompt)}
-    </p>
-    <div id="rematchWaitMsg" style="font-size:0.78rem; color:var(--valid); text-align:center; font-weight:bold; min-height:18px; margin-top:4px;">
-      ${myRematchVote ? escapeHtml(tr.waitingOpponentRematch) : ""}
-    </div>
-
-    <div class="set-Action-row">
-      <button class="btn-play-again" id="btnRematchConfirm" onclick="handlePlayAgainSameSettings()" ${myRematchVote ? "disabled" : ""}>${tr.btnPlayAgain}</button>
-      <button class="btn-exit-menu" onclick="handleExitToInitialMenu(true)">${tr.btnExitMenu}</button>
-    </div>
+    ${actionButtonsHtml}
   `;
 }
 
@@ -1389,6 +1454,7 @@ function startNewSetWithSameSettings() {
 }
 
 function handlePlayAgainSameSettings() {
+  if (myRole === "SPECTATOR") return;
   if (!conn || !conn.open || isAiMatch) {
     startNewSetWithSameSettings();
     return;
@@ -1410,13 +1476,18 @@ function handleExitToInitialMenu(notifyPeer = true) {
   document.getElementById("setSummaryModal").style.display = "none";
   document.getElementById("playConfigModal").style.display = "none";
 
-  if (notifyPeer && conn && conn.open) {
+  if (notifyPeer && myRole !== "SPECTATOR" && conn && conn.open) {
     try { conn.send({ type: "SET_DECISION", decision: "EXIT_MENU" }); } catch (_) {}
   }
   if (conn) {
     try { conn.close(); } catch (_) {}
     conn = null;
   }
+  spectatorConns.forEach(sc => {
+    try { sc.close(); } catch (_) {}
+  });
+  spectatorConns = [];
+
   if (peer) {
     try { peer.destroy(); } catch (_) {}
     peer = null;
@@ -1431,6 +1502,7 @@ function handleExitToInitialMenu(notifyPeer = true) {
   isAiMatch = false;
   myRole = "BOTH";
   opponentLeftHandled = false;
+  updateSpectatorBadge(0);
   document.getElementById("shareBtn").style.display = "none";
   document.getElementById("netBar").classList.remove("left-alert");
   document.getElementById("netStatus").textContent = t().netDefault;
@@ -1487,6 +1559,8 @@ function awardForfeitSetWinToConnectedPlayer() {
   const winEv = {
     id: "FORFEIT-" + Date.now(),
     winner: winnerRole,
+    nameW: playerNames.W,
+    nameB: playerNames.B,
     variant: playedVariant,
     matchOver: true,
     forfeitSetOnly: false
@@ -1513,10 +1587,35 @@ function awardForfeitSetWinToConnectedPlayer() {
   showSetVictoryModal(summaryObj);
 }
 
+// ============================================================================
+// WEBRTC MULTIPLAYER & MULTI-SPECTATOR RELAY HUB
+// ============================================================================
+function broadcastFromHostToAll(packet, excludeConn = null) {
+  if (myRole !== "W") return;
+  if (conn && conn.open && conn !== excludeConn) {
+    try { conn.send(packet); } catch (_) {}
+  }
+  spectatorConns = spectatorConns.filter(sc => sc && sc.open);
+  spectatorConns.forEach(sc => {
+    if (sc !== excludeConn) {
+      try { sc.send(packet); } catch (_) {}
+    }
+  });
+}
+
+function broadcastSpectatorCountFromHost() {
+  if (myRole !== "W") return;
+  spectatorConns = spectatorConns.filter(sc => sc && sc.open);
+  const count = spectatorConns.length;
+  updateSpectatorBadge(count);
+  broadcastFromHostToAll({ type: "SPECTATOR_COUNT", count });
+}
+
 function hostRoom(reconnectingCode = null, restoredBackup = null) {
   ensureAudio();
   stopDisconnectCountdown();
   isAiMatch = false;
+  spectatorConns = [];
   const code = reconnectingCode || generateSecureRoomCode();
   activeRoomCode = code;
   packetQueue = [];
@@ -1527,14 +1626,17 @@ function hostRoom(reconnectingCode = null, restoredBackup = null) {
   document.getElementById("netStatus").textContent = t().hostingWait(code);
   document.getElementById("shareBtn").style.display = "inline-block";
   myRole = "W";
+  updateSpectatorBadge(0);
 
   if (restoredBackup && restoredBackup.state) {
     playerNames = cloneState(restoredBackup.playerNames || { W: myPlayerName, B: "Friend" });
     state = cloneState(restoredBackup.state);
+    state.playerNames = { W: playerNames.W, B: playerNames.B };
     updateHeaderLabels();
     render();
   } else {
     playerNames.W = myPlayerName;
+    state.playerNames = { W: playerNames.W, B: playerNames.B };
     state.colors.W = myChosenColor;
     if (state.colors.B === state.colors.W) {
       state.colors.B = getDistinctFallbackColor(state.colors.W);
@@ -1554,27 +1656,26 @@ function hostRoom(reconnectingCode = null, restoredBackup = null) {
     if (!restoredBackup) shareInviteLink(code);
   });
 
+  // Host accepts both the Opponent ('B') AND any number of Spectators ('SPECTATOR')
   peer.on("connection", incomingConn => {
-    if (conn && conn.open && !isWaitingForReconnect) {
-      incomingConn.on("open", () => incomingConn.close());
-      return;
-    }
-    conn = incomingConn;
-    setupConn(code);
+    setupIncomingHostConn(incomingConn, code);
   });
   peer.on("disconnected", () => peer.reconnect());
 }
 
-function joinRoomWithCode(rawCode) {
+function joinRoomWithCode(rawCode, asSpectator = false) {
   ensureAudio();
   isAiMatch = false;
+  spectatorConns = [];
   const code = String(rawCode || "").trim().toUpperCase();
   if (code.length !== 6) return alert(t().enter6CodeAlert);
 
-  const backup = getActiveRoomBackup(code);
-  if (backup && backup.myRole === "W") {
-    hostRoom(code, backup);
-    return;
+  if (!asSpectator) {
+    const backup = getActiveRoomBackup(code);
+    if (backup && backup.myRole === "W") {
+      hostRoom(code, backup);
+      return;
+    }
   }
 
   stopDisconnectCountdown();
@@ -1584,27 +1685,35 @@ function joinRoomWithCode(rawCode) {
   if (peer) peer.destroy();
 
   peer = new Peer(PEER_CONFIG);
-  myRole = "B";
-  document.getElementById("shareBtn").style.display = "none";
-  if (backup && backup.state) {
-    playerNames = cloneState(backup.playerNames || { W: "Host", B: myPlayerName });
-    state = cloneState(backup.state);
-  } else {
-    playerNames.B = myPlayerName;
+  myRole = asSpectator ? "SPECTATOR" : "B";
+  document.getElementById("shareBtn").style.display = "inline-block";
+
+  if (!asSpectator) {
+    const backup = getActiveRoomBackup(code);
+    if (backup && backup.state) {
+      playerNames = cloneState(backup.playerNames || { W: "Host", B: myPlayerName });
+      playerNames.B = myPlayerName;
+      state = cloneState(backup.state);
+      state.playerNames = { W: playerNames.W, B: playerNames.B };
+    } else {
+      playerNames.B = myPlayerName;
+      state.playerNames = { W: playerNames.W, B: playerNames.B };
+    }
   }
+
   updateHeaderLabels();
   render();
 
   document.getElementById("netStatus").textContent = t().connectingTo(code);
   peer.on("open", () => {
     conn = peer.connect("tavli-net-" + code, { reliable: true });
-    setupConn(code, Boolean(backup));
+    setupClientConn(code, asSpectator);
   });
   peer.on("disconnected", () => peer.reconnect());
 }
 
 function handleOpponentLeft() {
-  if (opponentLeftHandled || state.phase === "SET_OVER") return;
+  if (myRole === "SPECTATOR" || opponentLeftHandled || state.phase === "SET_OVER") return;
   opponentLeftHandled = true;
   isWaitingForReconnect = true;
 
@@ -1637,7 +1746,7 @@ function handleOpponentLeft() {
         const probeConn = peer.connect("tavli-net-" + activeRoomCode, { reliable: true });
         probeConn.on("open", () => {
           conn = probeConn;
-          setupConn(activeRoomCode, true);
+          setupClientConn(activeRoomCode, false, true);
         });
       } catch (_) {}
     }
@@ -1647,129 +1756,89 @@ function handleOpponentLeft() {
 }
 
 function syncDatabaseWithPeer() {
-  if (conn && conn.open) {
-    conn.send({
-      type: "DB_SYNC",
-      snapshot: window.TavliDB.exportPublicSnapshot(),
-      role: myRole,
-      name: myPlayerName
-    });
+  const pkt = {
+    type: "DB_SYNC",
+    snapshot: window.TavliDB.exportPublicSnapshot(),
+    role: myRole,
+    name: myPlayerName
+  };
+  if (myRole === "W") {
+    broadcastFromHostToAll(pkt);
+  } else if (conn && conn.open) {
+    conn.send(pkt);
   }
 }
 
-function setupConn(code, isReconnectingAttempt = false) {
-  conn.on("open", () => {
-    const wasWaiting = isWaitingForReconnect;
-    stopDisconnectCountdown();
-    document.getElementById("netStatus").textContent = t().roomLocked(code);
-
-    const backup = getActiveRoomBackup(code);
-    const hasProgress = (state.scoreW > 0 || state.scoreB > 0 || state.rolled || (state.setGamesLog && state.setGamesLog.length > 0));
-
-    conn.send({
-      type: "HELLO",
-      role: myRole,
-      name: myPlayerName,
-      color: myChosenColor,
-      isReconnect: Boolean(wasWaiting || isReconnectingAttempt || hasProgress || backup),
-      savedState: (wasWaiting || hasProgress) ? cloneState(state) : (backup ? backup.state : null),
-      savedNames: (wasWaiting || hasProgress) ? cloneState(playerNames) : (backup ? backup.playerNames : null),
-      dbSnapshot: window.TavliDB.exportPublicSnapshot()
-    });
-  });
-
-  conn.on("close", () => handleOpponentLeft());
-  conn.on("error", () => handleOpponentLeft());
-
-  conn.on("data", packet => {
+// Host-side connection handler: routes incoming connections as Opponent ('B') or Spectator ('SPECTATOR')
+function setupIncomingHostConn(incomingConn, code) {
+  incomingConn.on("data", packet => {
     if (!packet || typeof packet !== "object") return;
 
-    if (packet.type === "BYE") {
-      handleOpponentLeft();
-      return;
-    }
-
-    if (packet.type === "RESIGN_OFFER") {
-      const fromRole = packet.fromRole === "W" ? "W" : "B";
-      const pts = packet.pts === 2 ? 2 : 1;
-      const offererName = fromRole === "W" ? playerNames.W : playerNames.B;
-      pendingResignOffer = { fromRole, pts };
-      playChatSound();
-      document.getElementById("resignRespDesc").textContent = t().resignRespDesc(offererName, pts);
-      document.getElementById("resignRespondModal").style.display = "flex";
-      return;
-    }
-
-    if (packet.type === "RESIGN_RESPONSE") {
-      pendingResignOffer = null;
-      if (!packet.accepted) {
-        const winnerRole = packet.fromRole === "W" ? "B" : "W";
-        const winnerName = winnerRole === "W" ? playerNames.W : playerNames.B;
-        setStatus(t().resignDeclined(winnerName));
-      }
-      return;
-    }
-
-    if (packet.type === "SET_DECISION") {
-      if (packet.decision === "EXIT_MENU") {
-        opponentLeftHandled = true;
-        handleExitToInitialMenu(false);
-      } else if (packet.decision === "PLAY_AGAIN") {
-        peerRematchVote = true;
-        if (myRematchVote) startNewSetWithSameSettings();
-      }
-      return;
-    }
-
-    if (packet.type === "DB_SYNC") {
-      if (packet.snapshot) window.TavliDB.mergePublicSnapshot(packet.snapshot);
-      if (packet.name) {
-        const cleanName = String(packet.name).slice(0, 16);
-        if (packet.role === "W") playerNames.W = cleanName;
-        if (packet.role === "B") playerNames.B = cleanName;
-        updateHeaderLabels();
-        render();
-      }
-      return;
-    }
-
-    if (packet.type === "TYPING") {
-      const oppName = myRole === "W" ? playerNames.B : playerNames.W;
-      const ind = document.getElementById("typingIndicator");
-      if (packet.isTyping) {
-        ind.textContent = t().isTyping(oppName);
-        if (remoteTypingTimeout) clearTimeout(remoteTypingTimeout);
-        remoteTypingTimeout = setTimeout(() => { ind.textContent = ""; }, 2600);
-      } else {
-        ind.textContent = "";
-      }
-      return;
-    }
-
     if (packet.type === "HELLO") {
-      stopDisconnectCountdown();
-      if (packet.dbSnapshot) window.TavliDB.mergePublicSnapshot(packet.dbSnapshot);
-      const cleanName = String(packet.name || "Friend").slice(0, 16);
-      const reqColor = CHECKER_COLORS.some(c => c.id === packet.color) ? packet.color : "black";
-
-      if (packet.role === "W") {
-        playerNames.W = cleanName;
-        state.colors.W = reqColor;
-      } else if (packet.role === "B") {
-        playerNames.B = cleanName;
-        state.colors.B = (reqColor === state.colors.W) ? getDistinctFallbackColor(state.colors.W) : reqColor;
+      if (packet.dbSnapshot) {
+        window.TavliDB.mergePublicSnapshot(packet.dbSnapshot);
       }
+      const cleanName = String(packet.name || "Friend").trim().slice(0, 16) || "Friend";
+
+      // Check if joining as Spectator OR if the player 'B' slot is already occupied by an active connection
+      const playerSlotTaken = (conn && conn.open && conn !== incomingConn && !isWaitingForReconnect);
+      const isSpectatorConn = (packet.role === "SPECTATOR" || playerSlotTaken);
+
+      if (isSpectatorConn) {
+        incomingConn._isSpectator = true;
+        incomingConn._spectatorName = cleanName;
+        if (!spectatorConns.includes(incomingConn)) {
+          spectatorConns.push(incomingConn);
+        }
+        broadcastSpectatorCountFromHost();
+
+        state.playerNames = { W: playerNames.W, B: playerNames.B };
+        incomingConn.send({
+          type: "HELLO_ACK",
+          assignedRole: "SPECTATOR",
+          playerNames: cloneState(playerNames),
+          state: cloneState(state),
+          spectatorCount: spectatorConns.length,
+          dbSnapshot: window.TavliDB.exportPublicSnapshot()
+        });
+
+        const joinMsg = t().spectatorJoinedChat(cleanName);
+        appendChatLine(t().sysLabel, joinMsg, "SYS");
+        broadcastFromHostToAll({ type: "SYS_CHAT", text: joinMsg }, incomingConn);
+        return;
+      }
+
+      // Otherwise, this is our Opponent ('B')
+      incomingConn._isSpectator = false;
+      conn = incomingConn;
+      stopDisconnectCountdown();
+      document.getElementById("netStatus").textContent = t().roomLocked(code);
+
+      const reqColor = CHECKER_COLORS.some(c => c.id === packet.color) ? packet.color : "black";
+      playerNames.W = myPlayerName;
+      playerNames.B = cleanName;
+      state.playerNames = { W: playerNames.W, B: playerNames.B };
+      state.colors.B = (reqColor === state.colors.W) ? getDistinctFallbackColor(state.colors.W) : reqColor;
 
       const localHasProgress = (state.scoreW > 0 || state.scoreB > 0 || state.rolled || (state.setGamesLog && state.setGamesLog.length > 0));
       if (packet.isReconnect && (localHasProgress || packet.savedState)) {
         if (!localHasProgress && packet.savedState) {
           state = cloneState(packet.savedState);
-          if (packet.savedNames) playerNames = cloneState(packet.savedNames);
         }
+        state.playerNames = { W: playerNames.W, B: playerNames.B };
         updateHeaderLabels();
         appendChatLine(t().sysLabel, t().oppRejoinedChat(cleanName), "SYS");
         setStatus(t().oppRejoinedStatus(cleanName));
         saveActiveRoomBackup();
+
+        conn.send({
+          type: "HELLO_ACK",
+          assignedRole: "B",
+          playerNames: cloneState(playerNames),
+          state: cloneState(state),
+          spectatorCount: spectatorConns.length,
+          dbSnapshot: window.TavliDB.exportPublicSnapshot()
+        });
         syncState();
         syncDatabaseWithPeer();
         playTurnChime();
@@ -1781,35 +1850,221 @@ function setupConn(code, isReconnectingAttempt = false) {
       updateHeaderLabels();
       appendChatLine(t().sysLabel, t().joinedTableChat(cleanName), "SYS");
 
-      if (myRole === "W") {
-        state.scoreW = 0;
-        state.scoreB = 0;
-        state.variantIdx = 0;
-        resetSetTracking();
-        initGame("ROLL_OFF");
-        syncState();
-        syncDatabaseWithPeer();
-        playTurnChime();
-      }
+      state.scoreW = 0;
+      state.scoreB = 0;
+      state.variantIdx = 0;
+      resetSetTracking();
+      initGame("ROLL_OFF");
+
+      conn.send({
+        type: "HELLO_ACK",
+        assignedRole: "B",
+        playerNames: cloneState(playerNames),
+        state: cloneState(state),
+        spectatorCount: spectatorConns.length,
+        dbSnapshot: window.TavliDB.exportPublicSnapshot()
+      });
+      syncState();
+      syncDatabaseWithPeer();
+      playTurnChime();
       render();
       return;
     }
 
-    if (packet.type === "CHAT") {
-      const sender = String(packet.sender || "Friend").slice(0, 16);
-      const text = String(packet.text || "").slice(0, 140);
-      const senderRole = packet.role === "W" ? "W" : "B";
-      document.getElementById("typingIndicator").textContent = "";
-      if (text) {
-        playChatSound();
-        appendChatLine(sender, text, senderRole);
+    handleCommonPacketOnPeer(packet, incomingConn);
+  });
+
+  incomingConn.on("close", () => {
+    if (incomingConn._isSpectator) {
+      spectatorConns = spectatorConns.filter(sc => sc !== incomingConn);
+      broadcastSpectatorCountFromHost();
+    } else if (incomingConn === conn) {
+      handleOpponentLeft();
+    }
+  });
+
+  incomingConn.on("error", () => {
+    if (incomingConn._isSpectator) {
+      spectatorConns = spectatorConns.filter(sc => sc !== incomingConn);
+      broadcastSpectatorCountFromHost();
+    } else if (incomingConn === conn) {
+      handleOpponentLeft();
+    }
+  });
+}
+
+// Client-side connection handler (for Player 'B' or Spectator connecting to Host 'W')
+function setupClientConn(code, asSpectator = false, isReconnectingAttempt = false) {
+  conn.on("open", () => {
+    const wasWaiting = isWaitingForReconnect;
+    stopDisconnectCountdown();
+    document.getElementById("netStatus").textContent =
+      asSpectator ? t().spectatingStatus(code) : t().roomLocked(code);
+
+    const backup = !asSpectator ? getActiveRoomBackup(code) : null;
+    const hasProgress = !asSpectator && (state.scoreW > 0 || state.scoreB > 0 || state.rolled || (state.setGamesLog && state.setGamesLog.length > 0));
+
+    conn.send({
+      type: "HELLO",
+      role: asSpectator ? "SPECTATOR" : "B",
+      name: myPlayerName,
+      color: myChosenColor,
+      isReconnect: Boolean(!asSpectator && (wasWaiting || isReconnectingAttempt || hasProgress || backup)),
+      savedState: (!asSpectator && (wasWaiting || hasProgress)) ? cloneState(state) : (backup ? backup.state : null),
+      savedNames: (!asSpectator && (wasWaiting || hasProgress)) ? cloneState(playerNames) : (backup ? backup.playerNames : null),
+      dbSnapshot: window.TavliDB.exportPublicSnapshot()
+    });
+  });
+
+  conn.on("close", () => handleOpponentLeft());
+  conn.on("error", () => handleOpponentLeft());
+
+  conn.on("data", packet => {
+    if (!packet || typeof packet !== "object") return;
+
+    if (packet.type === "HELLO_ACK") {
+      if (packet.dbSnapshot) {
+        window.TavliDB.mergePublicSnapshot(packet.dbSnapshot);
       }
+      if (packet.assignedRole === "SPECTATOR") {
+        myRole = "SPECTATOR";
+        document.getElementById("netStatus").textContent = t().spectatingStatus(code);
+      }
+      if (packet.playerNames) {
+        if (packet.playerNames.W) playerNames.W = packet.playerNames.W;
+        if (packet.playerNames.B) playerNames.B = packet.playerNames.B;
+      }
+      if (packet.spectatorCount !== undefined) {
+        updateSpectatorBadge(packet.spectatorCount);
+      }
+      if (packet.state) {
+        state = packet.state;
+        state.playerNames = { W: playerNames.W, B: playerNames.B };
+      }
+      updateHeaderLabels();
+      saveActiveRoomBackup();
+      render();
       return;
     }
 
-    packetQueue.push(packet);
-    processNextStatePacket();
+    handleCommonPacketOnPeer(packet, conn);
   });
+}
+
+function handleCommonPacketOnPeer(packet, sourceConn) {
+  if (packet.type === "SPECTATOR_COUNT") {
+    updateSpectatorBadge(packet.count);
+    return;
+  }
+
+  if (packet.type === "SYS_CHAT") {
+    if (packet.text) appendChatLine(t().sysLabel, packet.text, "SYS");
+    return;
+  }
+
+  if (packet.type === "BYE") {
+    if (sourceConn && sourceConn._isSpectator) {
+      spectatorConns = spectatorConns.filter(sc => sc !== sourceConn);
+      broadcastSpectatorCountFromHost();
+    } else {
+      handleOpponentLeft();
+    }
+    return;
+  }
+
+  if (packet.type === "RESIGN_OFFER") {
+    if (myRole === "SPECTATOR") return;
+    const fromRole = packet.fromRole === "W" ? "W" : "B";
+    const pts = packet.pts === 2 ? 2 : 1;
+    const offererName = fromRole === "W" ? playerNames.W : playerNames.B;
+    pendingResignOffer = { fromRole, pts };
+    playChatSound();
+    document.getElementById("resignRespDesc").textContent = t().resignRespDesc(offererName, pts);
+    document.getElementById("resignRespondModal").style.display = "flex";
+    return;
+  }
+
+  if (packet.type === "RESIGN_RESPONSE") {
+    pendingResignOffer = null;
+    if (!packet.accepted) {
+      const winnerRole = packet.fromRole === "W" ? "B" : "W";
+      const winnerName = winnerRole === "W" ? playerNames.W : playerNames.B;
+      setStatus(t().resignDeclined(winnerName));
+    }
+    return;
+  }
+
+  if (packet.type === "SET_DECISION") {
+    if (packet.decision === "EXIT_MENU") {
+      opponentLeftHandled = true;
+      handleExitToInitialMenu(false);
+    } else if (packet.decision === "PLAY_AGAIN") {
+      peerRematchVote = true;
+      if (myRematchVote) startNewSetWithSameSettings();
+    }
+    return;
+  }
+
+  if (packet.type === "DB_SYNC") {
+    if (packet.snapshot) window.TavliDB.mergePublicSnapshot(packet.snapshot);
+    if (packet.name && (packet.role === "W" || packet.role === "B")) {
+      const cleanName = String(packet.name).trim().slice(0, 16);
+      if (packet.role === "W" && cleanName) playerNames.W = cleanName;
+      if (packet.role === "B" && cleanName) playerNames.B = cleanName;
+      if (state.playerNames) {
+        state.playerNames.W = playerNames.W;
+        state.playerNames.B = playerNames.B;
+      }
+      updateHeaderLabels();
+      render();
+    }
+    if (myRole === "W") {
+      broadcastFromHostToAll(packet, sourceConn);
+    }
+    return;
+  }
+
+  if (packet.type === "TYPING") {
+    const senderName = packet.sender || (myRole === "W" ? playerNames.B : playerNames.W);
+    const ind = document.getElementById("typingIndicator");
+    if (packet.isTyping) {
+      ind.textContent = t().isTyping(senderName);
+      if (remoteTypingTimeout) clearTimeout(remoteTypingTimeout);
+      remoteTypingTimeout = setTimeout(() => { ind.textContent = ""; }, 2600);
+    } else {
+      ind.textContent = "";
+    }
+    if (myRole === "W") {
+      broadcastFromHostToAll(packet, sourceConn);
+    }
+    return;
+  }
+
+  if (packet.type === "CHAT") {
+    const sender = String(packet.sender || "Friend").slice(0, 16);
+    const text = String(packet.text || "").slice(0, 140);
+    const senderRole = packet.role === "SPECTATOR" ? "SPECTATOR" : (packet.role === "W" ? "W" : "B");
+    document.getElementById("typingIndicator").textContent = "";
+    if (text) {
+      playChatSound();
+      appendChatLine(sender, text, senderRole);
+      if (myRole === "W") {
+        broadcastFromHostToAll(packet, sourceConn);
+      }
+    }
+    return;
+  }
+
+  // Relay board STATE from Player 'B' to all connected Spectators if we are the Host ('W')
+  if (myRole === "W" && sourceConn === conn) {
+    spectatorConns = spectatorConns.filter(sc => sc && sc.open);
+    spectatorConns.forEach(sc => {
+      try { sc.send(packet); } catch (_) {}
+    });
+  }
+
+  packetQueue.push(packet);
+  processNextStatePacket();
 }
 
 function processNextStatePacket() {
@@ -1831,10 +2086,20 @@ function processNextStatePacket() {
     return;
   }
 
+  // Synchronize authoritative playerNames from the state packet (While preserving our own logged-in name!)
+  const incomingNames = packet.playerNames || incoming.playerNames;
+  if (incomingNames) {
+    if (incomingNames.W && incomingNames.W !== "Player 1") playerNames.W = incomingNames.W;
+    if (incomingNames.B && incomingNames.B !== "Player 2") playerNames.B = incomingNames.B;
+  }
+  if (myRole === "W" && myPlayerName) playerNames.W = myPlayerName;
+  if (myRole === "B" && myPlayerName) playerNames.B = myPlayerName;
+  incoming.playerNames = { W: playerNames.W, B: playerNames.B };
+
   const prevTurn = state.turn;
   const animInfo = incoming.lastMoveAnim;
   const shouldAnimateMove =
-    (incoming.lastAction === "MOVE" || incoming.lastAction === "HIT" || incoming.lastAction === "WIN") &&
+    (incoming.lastAction === "MOVE" || incoming.lastAction === "HIT" || incoming.lastAction === "PIN" || incoming.lastAction === "WIN") &&
     animInfo &&
     animInfo.from !== undefined &&
     animInfo.to !== undefined;
@@ -1881,8 +2146,9 @@ function processNextStatePacket() {
         finishPacketStep();
       });
     } else {
-      if (state.lastAction === "MOVE" || state.lastAction === "UNDO") playCheckerClack(false);
-      if (state.lastAction === "HIT") playCheckerClack(true);
+      if (state.lastAction === "MOVE" || state.lastAction === "UNDO") playCheckerClack("MOVE");
+      if (state.lastAction === "HIT") playCheckerClack("HIT");
+      if (state.lastAction === "PIN") playCheckerClack("PIN");
       if (state.lastAction === "WIN") {
         playWinFanfare();
         if (state.turn === myRole) checkTriggerAutoRollOrAI();
@@ -1914,19 +2180,38 @@ window.addEventListener("beforeunload", notifyLeavingTab);
 window.addEventListener("pagehide", notifyLeavingTab);
 
 function syncState() {
+  if (myRole === "SPECTATOR") return;
+  if (myRole === "W" && myPlayerName) playerNames.W = myPlayerName;
+  if (myRole === "B" && myPlayerName) playerNames.B = myPlayerName;
+  state.playerNames = { W: playerNames.W, B: playerNames.B };
+
   saveActiveRoomBackup();
-  if (conn && conn.open) {
-    conn.send({ type: "STATE", state: cloneState(state) });
+  const pkt = {
+    type: "STATE",
+    state: cloneState(state),
+    playerNames: cloneState(playerNames)
+  };
+
+  if (myRole === "W") {
+    broadcastFromHostToAll(pkt);
+  } else if (conn && conn.open) {
+    conn.send(pkt);
   }
 }
 
 function handleChatTyping() {
-  if (!conn || !conn.open) return;
   const val = document.getElementById("chatInput").value.trim();
-  conn.send({ type: "TYPING", isTyping: val.length > 0 });
+  const pkt = { type: "TYPING", isTyping: val.length > 0, sender: myPlayerName };
+  if (myRole === "W") {
+    broadcastFromHostToAll(pkt);
+  } else if (conn && conn.open) {
+    conn.send(pkt);
+  }
   if (localTypingTimeout) clearTimeout(localTypingTimeout);
   localTypingTimeout = setTimeout(() => {
-    if (conn && conn.open) conn.send({ type: "TYPING", isTyping: false });
+    const stopPkt = { type: "TYPING", isTyping: false, sender: myPlayerName };
+    if (myRole === "W") broadcastFromHostToAll(stopPkt);
+    else if (conn && conn.open) conn.send(stopPkt);
   }, 1800);
 }
 
@@ -1936,11 +2221,19 @@ function sendChat() {
   if (!text) return;
   input.value = "";
   if (localTypingTimeout) clearTimeout(localTypingTimeout);
-  const myColorRole = myRole === "B" ? "B" : "W";
-  appendChatLine(myPlayerName, text, myColorRole);
-  if (conn && conn.open) {
-    conn.send({ type: "TYPING", isTyping: false });
-    conn.send({ type: "CHAT", sender: myPlayerName, role: myColorRole, text });
+
+  const myChatRole = myRole === "SPECTATOR" ? "SPECTATOR" : (myRole === "B" ? "B" : "W");
+  appendChatLine(myPlayerName, text, myChatRole);
+
+  const stopPkt = { type: "TYPING", isTyping: false, sender: myPlayerName };
+  const chatPkt = { type: "CHAT", sender: myPlayerName, role: myChatRole, text };
+
+  if (myRole === "W") {
+    broadcastFromHostToAll(stopPkt);
+    broadcastFromHostToAll(chatPkt);
+  } else if (conn && conn.open) {
+    conn.send(stopPkt);
+    conn.send(chatPkt);
   }
 }
 
@@ -1953,11 +2246,15 @@ function appendChatLine(sender, text, role = "W") {
   nameSpan.className = "chat-sender";
   if (role === "SYS") {
     nameSpan.style.color = "#81c784";
+    nameSpan.textContent = `${sender}:`;
+  } else if (role === "SPECTATOR") {
+    nameSpan.style.color = "#4db6ac";
+    nameSpan.textContent = `👁️ ${sender} [${t().spectatorTag}]:`;
   } else {
     const cId = role === "B" ? state.colors.B : state.colors.W;
     nameSpan.style.color = getColorMeta(cId).chatHex;
+    nameSpan.textContent = `${sender}:`;
   }
-  nameSpan.textContent = `${sender}:`;
 
   const msgSpan = document.createElement("span");
   msgSpan.textContent = ` ${text}`;
@@ -1974,7 +2271,7 @@ function shareInviteLink(code) {
   if (navigator.share) {
     navigator.share({
       title: "Greek Tavli Online",
-      text: `Room ${code}:`,
+      text: `Join or Watch my Greek Tavli match (Room ${code}):`,
       url: inviteUrl
     }).catch(() => {});
   } else if (navigator.clipboard) {
@@ -2048,7 +2345,7 @@ window.addEventListener("DOMContentLoaded", () => {
   renderTargetScorePicker();
   showScreen("LANDING");
 
-  // Item 6: Auto-open Join modal when visiting via an Invite Link (?room=XXXXXX)
+  // Auto-open Join / Spectate modal when visiting via an Invite Link (?room=XXXXXX)
   const params = new URLSearchParams(window.location.search);
   const roomFromUrl = params.get("room");
   if (roomFromUrl && roomFromUrl.trim().length === 6) {
