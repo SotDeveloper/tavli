@@ -142,8 +142,6 @@ function closePlayConfigModal() {
 async function confirmStartSelectedMode() {
   ensureAudio();
   const tr = t();
-
-  // Ensure persistent login name is loaded first
   checkPersistentLoginSession();
 
   const guestAuthBox = document.getElementById("inviteGuestAuthSection");
@@ -304,7 +302,6 @@ function getMostRolledComboStr(countsMap) {
   return `${combo} (${count}x)`;
 }
 
-// Strictly records +1 game win / +1 game played per finished board game (using authoritative names)
 function recordWinEventToDatabase(winEv) {
   if (isAiMatch || myRole === "SPECTATOR") return;
   if (!winEv || !winEv.id || winEv.id === lastRecordedWinEventId) return;
@@ -613,7 +610,6 @@ function isReadyToBearOffState(s, player, variant, path) {
   return true;
 }
 
-// Returns distinct flags for Portes Blot Hit (wasHit) vs Plakoto Capture/Pin (wasPin)
 function applySingleStepToState(s, step) {
   const { from, to, die } = step;
   const player = s.turn;
@@ -1057,7 +1053,6 @@ function attemptBearOff() {
   if (move) executeMoveSequence(move.steps);
 }
 
-// Plays the 3 distinct custom checker sounds ("MOVE", "HIT", or "PIN") and broadcasts action type to peers/spectators
 function executeMoveSequence(steps, onSequenceDone = null) {
   const startOrigin = steps[0].from;
   const finalDest = steps[steps.length - 1].to;
@@ -1656,7 +1651,6 @@ function hostRoom(reconnectingCode = null, restoredBackup = null) {
     if (!restoredBackup) shareInviteLink(code);
   });
 
-  // Host accepts both the Opponent ('B') AND any number of Spectators ('SPECTATOR')
   peer.on("connection", incomingConn => {
     setupIncomingHostConn(incomingConn, code);
   });
@@ -1769,7 +1763,6 @@ function syncDatabaseWithPeer() {
   }
 }
 
-// Host-side connection handler: routes incoming connections as Opponent ('B') or Spectator ('SPECTATOR')
 function setupIncomingHostConn(incomingConn, code) {
   incomingConn.on("data", packet => {
     if (!packet || typeof packet !== "object") return;
@@ -1780,7 +1773,6 @@ function setupIncomingHostConn(incomingConn, code) {
       }
       const cleanName = String(packet.name || "Friend").trim().slice(0, 16) || "Friend";
 
-      // Check if joining as Spectator OR if the player 'B' slot is already occupied by an active connection
       const playerSlotTaken = (conn && conn.open && conn !== incomingConn && !isWaitingForReconnect);
       const isSpectatorConn = (packet.role === "SPECTATOR" || playerSlotTaken);
 
@@ -1808,7 +1800,6 @@ function setupIncomingHostConn(incomingConn, code) {
         return;
       }
 
-      // Otherwise, this is our Opponent ('B')
       incomingConn._isSpectator = false;
       conn = incomingConn;
       stopDisconnectCountdown();
@@ -1893,7 +1884,6 @@ function setupIncomingHostConn(incomingConn, code) {
   });
 }
 
-// Client-side connection handler (for Player 'B' or Spectator connecting to Host 'W')
 function setupClientConn(code, asSpectator = false, isReconnectingAttempt = false) {
   conn.on("open", () => {
     const wasWaiting = isWaitingForReconnect;
@@ -2055,7 +2045,6 @@ function handleCommonPacketOnPeer(packet, sourceConn) {
     return;
   }
 
-  // Relay board STATE from Player 'B' to all connected Spectators if we are the Host ('W')
   if (myRole === "W" && sourceConn === conn) {
     spectatorConns = spectatorConns.filter(sc => sc && sc.open);
     spectatorConns.forEach(sc => {
@@ -2086,7 +2075,6 @@ function processNextStatePacket() {
     return;
   }
 
-  // Synchronize authoritative playerNames from the state packet (While preserving our own logged-in name!)
   const incomingNames = packet.playerNames || incoming.playerNames;
   if (incomingNames) {
     if (incomingNames.W && incomingNames.W !== "Player 1") playerNames.W = incomingNames.W;
@@ -2345,7 +2333,6 @@ window.addEventListener("DOMContentLoaded", () => {
   renderTargetScorePicker();
   showScreen("LANDING");
 
-  // Auto-open Join / Spectate modal when visiting via an Invite Link (?room=XXXXXX)
   const params = new URLSearchParams(window.location.search);
   const roomFromUrl = params.get("room");
   if (roomFromUrl && roomFromUrl.trim().length === 6) {
