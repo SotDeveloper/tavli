@@ -153,7 +153,7 @@
       box-shadow: 0 18px 50px rgba(0,0,0,0.75);
       display: flex;
       flex-direction: column;
-      gap: 18px;
+      gap: 16px;
     }
     .landing-header {
       text-align: center;
@@ -267,17 +267,17 @@
     .hub-menu-col {
       display: flex;
       flex-direction: column;
-      gap: 9px;
+      gap: 8px;
       justify-content: center;
     }
     .hub-btn-primary {
       width: 100%;
-      padding: 12px 16px;
+      padding: 11px 16px;
       border-radius: 11px;
       border: 2px solid rgba(255,255,255,0.12);
       background: linear-gradient(135deg, var(--wood-mid), rgba(0,0,0,0.45));
       color: #fff;
-      font-size: 0.94rem;
+      font-size: 0.92rem;
       font-weight: 800;
       cursor: pointer;
       display: flex;
@@ -300,6 +300,10 @@
       background: linear-gradient(135deg, #00897b, #004d40);
       border-color: #4db6ac;
     }
+    .hub-btn-primary.learn-btn {
+      background: linear-gradient(135deg, #3949ab, #1a237e);
+      border-color: #7986cb;
+    }
     .hub-secondary-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -307,7 +311,7 @@
       margin-top: 2px;
     }
     .hub-btn-sec {
-      padding: 11px 8px;
+      padding: 10px 8px;
       border-radius: 10px;
       border: 1px solid var(--wood-mid);
       background: rgba(0,0,0,0.35);
@@ -358,7 +362,7 @@
     }
 
     /* ============================================================================
-       2. IN-GAME RESPONSIVE LAYOUT (MOBILE & DESKTOP SAFE)
+       2. IN-GAME RESPONSIVE LAYOUT & INTERACTIVE TUTORIAL COACH PANEL
        ============================================================================ */
     .app-layout {
       width: 100%;
@@ -427,6 +431,86 @@
         height: 0 !important;
         max-height: none !important;
       }
+    }
+
+    /* Interactive Tutorial Coach Panel (Shown on Board During "Learn to Play" Mode) */
+    .tutorial-coach-panel {
+      width: 100%;
+      background: linear-gradient(135deg, #1a237e, #283593);
+      border: 2px solid #ffd54f;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 6px;
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+    }
+    .tut-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .tut-variant-tabs {
+      display: flex;
+      gap: 4px;
+    }
+    .tut-tab {
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.28);
+      background: rgba(0,0,0,0.3);
+      color: #c5cae9;
+      font-size: 0.74rem;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .tut-tab.active {
+      background: var(--accent);
+      color: #111;
+      border-color: #fff;
+    }
+    .tut-step-nav {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #ffe082;
+    }
+    .tut-nav-btn {
+      padding: 3px 8px;
+      border-radius: 5px;
+      border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(0,0,0,0.4);
+      color: #fff;
+      font-weight: bold;
+      font-size: 0.72rem;
+      cursor: pointer;
+    }
+    .tut-nav-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    .tut-lesson-title {
+      font-size: 0.9rem;
+      font-weight: 900;
+      color: #ffd54f;
+    }
+    .tut-lesson-body {
+      font-size: 0.78rem;
+      line-height: 1.35;
+      color: #fff;
+    }
+    .tut-tip-box {
+      background: rgba(0,0,0,0.32);
+      border-left: 3px solid #00e676;
+      padding: 5px 8px;
+      border-radius: 4px;
+      font-size: 0.74rem;
+      color: #b9f6ca;
     }
 
     /* Modals */
@@ -775,6 +859,11 @@
             <span>➔</span>
           </button>
 
+          <button class="hub-btn-primary learn-btn" onclick="startInteractiveTutorial()">
+            <span>🎓 <span id="hubBtnLearn">Learn to Play (All 3 Games)</span></span>
+            <span>➔</span>
+          </button>
+
           <div class="hub-secondary-grid">
             <button class="hub-btn-sec" onclick="openProfileModal()">
               <span style="font-size:1.25rem;">👤</span>
@@ -874,7 +963,7 @@
         <div class="auth-error" id="modalAuthErrorBox"></div>
       </div>
 
-      <!-- Join Mode Role Selector: Play vs Watch as Spectator (Shown in JOIN / SPECTATE / Invite Link) -->
+      <!-- Join Mode Role Selector: Play vs Watch as Spectator -->
       <div id="joinRoleToggleSection" style="display:none; margin-bottom:6px;">
         <label class="sec-label" id="lblJoinModeType">Participation Mode</label>
         <div class="toggle-row">
@@ -1077,7 +1166,7 @@
   </div>
 
   <!-- ==========================================================================
-       IN-GAME BOARD & CHAT LAYOUT (SHOWN ONLY DURING GAMEPLAY)
+       IN-GAME BOARD & CHAT LAYOUT (SHOWN DURING GAMEPLAY & LEARN MODE)
        ========================================================================== -->
   <div class="app-layout" id="gameAppLayout">
     <div class="left-spacer"></div>
@@ -1095,6 +1184,26 @@
           <button class="btn-sm btn-mute" id="muteBtn" onclick="toggleSound()">Sound: ON</button>
           <button class="btn-sm" style="background:#e53935; color:#fff;" id="menuReturnBtn" onclick="handleExitToInitialMenu(true)">🏠 Menu</button>
         </div>
+      </div>
+
+      <!-- INTERACTIVE TUTORIAL COACH PANEL (Visible Only in "Learn to Play" Mode) -->
+      <div class="tutorial-coach-panel" id="tutorialCoachPanel">
+        <div class="tut-top-row">
+          <div class="tut-variant-tabs">
+            <button class="tut-tab active" id="tutTab_PORTES" onclick="selectTutorialVariant('PORTES')">Portes</button>
+            <button class="tut-tab" id="tutTab_PLAKOTO" onclick="selectTutorialVariant('PLAKOTO')">Plakoto</button>
+            <button class="tut-tab" id="tutTab_FEVGA" onclick="selectTutorialVariant('FEVGA')">Fevga</button>
+          </div>
+          <div class="tut-step-nav">
+            <button class="tut-nav-btn" id="btnTutPrev" onclick="changeTutorialStep(-1)">◀ Prev</button>
+            <span id="tutStepCounter">Lesson 1 / 3</span>
+            <button class="tut-nav-btn" id="btnTutReset" onclick="resetCurrentTutorialScenario()">↺ Reset</button>
+            <button class="tut-nav-btn" id="btnTutNext" onclick="changeTutorialStep(1)" style="background:var(--valid); color:#111;">Next ▶</button>
+          </div>
+        </div>
+        <div class="tut-lesson-title" id="tutLessonTitle">Lesson Title</div>
+        <div class="tut-lesson-body" id="tutLessonBody">Interactive instructions appear here.</div>
+        <div class="tut-tip-box" id="tutTipBox">💡 Pro Tip appears here.</div>
       </div>
 
       <!-- Fevga 6-Prime Temporary Warning Banner -->
@@ -1179,9 +1288,10 @@
   </div>
 
   <!-- Small Version Label at Bottom-Right -->
-  <div style="position:fixed; bottom:4px; right:8px; font-size:0.65rem; color:rgba(255,255,255,0.45); pointer-events:none; z-index:9999; font-weight:600;">v18</div>
+  <div style="position:fixed; bottom:4px; right:8px; font-size:0.65rem; color:rgba(255,255,255,0.45); pointer-events:none; z-index:9999; font-weight:600;">v19</div>
 
   <script src="i18n.js"></script>
+  <script src="tutorial.js"></script>
   <script src="ui.js"></script>
   <script src="app.js"></script>
 </body>

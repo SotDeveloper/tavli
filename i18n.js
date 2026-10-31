@@ -1,4 +1,4 @@
-// Greek Tavli Online — Bilingual Dictionary & Global Constants (i18n.js)
+// Greek Tavli Online — Bilingual Dictionary & Global Constants (i18n.js — v19)
 
 let myLang = "en";
 let myTheme = "classic";
@@ -35,6 +35,7 @@ let myTargetScorePref = 7;
 let myGameModePref = "FULL";
 let myAiDifficulty = "MEDIUM";
 let isAiMatch = false;
+let isTutorialMode = false;
 let aiTurnTimer = null;
 let pendingResignOffer = null;
 
@@ -55,6 +56,7 @@ const I18N = {
     hubBtnJoin: "Join Friend's Game",
     hubBtnSpectate: "Watch Game (Spectator)",
     hubBtnAi: "Play Against AI",
+    hubBtnLearn: "Learn to Play (All 3 Games)",
     hubArtCaption: "100% Hardware CSPRNG Dice • P2P & AI",
     titleHostModal: "🎲 Host a Game Against a Friend",
     titleJoinModal: "🤝 Join Friend's Game",
@@ -99,6 +101,7 @@ const I18N = {
     btnStartAi: "Start vs AI",
     netDefault: "Online Match",
     netAiMode: diff => `Mode: vs AI (${diff}) • Stats Not Counted`,
+    netTutorialMode: "🎓 Interactive Learn Mode • Select a Game & Try Each Move!",
     spectatingStatus: code => `👁️ Spectating Room ${code}`,
     spectatorJoinedChat: name => `👁️ ${name} is now watching as a Spectator.`,
     spectatorTag: "Spectator",
@@ -231,6 +234,7 @@ const I18N = {
     hubBtnJoin: "Σύνδεση σε Παιχνίδι Φίλου",
     hubBtnSpectate: "Παρακολούθηση (Θεατής)",
     hubBtnAi: "Παιχνίδι Εναντίον AI",
+    hubBtnLearn: "Μάθετε Τάβλι (Και τα 3 Παιχνίδια)",
     hubArtCaption: "100% Δίκαια Ζάρια CSPRNG • Online & AI",
     titleHostModal: "🎲 Δημιουργία Παιχνιδιού με Φίλο",
     titleJoinModal: "🤝 Σύνδεση σε Παιχνίδι Φίλου",
@@ -275,6 +279,7 @@ const I18N = {
     btnStartAi: "Έναρξη με AI",
     netDefault: "Online Παιχνίδι",
     netAiMode: diff => `Λειτουργία: Εναντίον AI (${diff}) • Χωρίς Καταγραφή Στατιστικών`,
+    netTutorialMode: "🎓 Διαδραστική Εκμάθηση • Επιλέξτε Παιχνίδι & Δοκιμάστε τις Κινήσεις!",
     spectatingStatus: code => `👁️ Παρακολούθηση Δωματίου ${code}`,
     spectatorJoinedChat: name => `👁️ Ο/Η ${name} παρακολουθεί ως Θεατής.`,
     spectatorTag: "Θεατής",

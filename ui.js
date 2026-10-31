@@ -1,4 +1,4 @@
-// Greek Tavli Online — UI, Auth, Modals, 3-Mode Custom Audio & Board Renderer (ui.js)
+// Greek Tavli Online — UI, Auth, Modals, 3-Mode Custom Audio & Board Renderer (ui.js — v19)
 
 function t() {
   return I18N[myLang] || I18N.en;
@@ -61,6 +61,9 @@ function selectLangPref(lang) {
   if (sEN) sEN.classList.toggle("active", myLang === "en");
   if (sEL) sEL.classList.toggle("active", myLang === "el");
   applyLanguageToUI();
+  if (isTutorialMode && typeof loadTutorialScenario === "function") {
+    loadTutorialScenario();
+  }
 }
 
 function selectAiDifficulty(diff) {
@@ -153,7 +156,7 @@ function updateAdminButtonVisibility() {
   if (btn2) btn2.style.display = isAdmin ? "flex" : "none";
 }
 
-// Fixed Persistent Login Session check — Never drops logged-in name even before Firebase finishes pulling!
+// Persistent Login Session check — Never drops logged-in name even before Firebase finishes pulling!
 function checkPersistentLoginSession() {
   const savedName = localStorage.getItem("tavli_logged_in_name");
   const savedPinHash = localStorage.getItem("tavli_logged_in_pinhash");
@@ -161,7 +164,6 @@ function checkPersistentLoginSession() {
 
   if (savedName && savedName.trim()) {
     const u = window.TavliDB.getUser(savedName);
-    // If user is already in local DB and hash matches, OR if Firebase hasn't finished pulling yet, honor the saved session
     if (!u || !savedPinHash || !u.pinHash || u.pinHash === savedPinHash) {
       myPlayerName = u ? u.name : savedName.trim();
       isAuthenticatedAccount = true;
@@ -262,6 +264,9 @@ function applyLanguageToUI() {
   document.getElementById("hubBtnJoin").textContent = tr.hubBtnJoin;
   document.getElementById("hubBtnSpectate").textContent = tr.hubBtnSpectate;
   document.getElementById("hubBtnAi").textContent = tr.hubBtnAi;
+  const learnBtnEl = document.getElementById("hubBtnLearn");
+  if (learnBtnEl && tr.hubBtnLearn) learnBtnEl.textContent = tr.hubBtnLearn;
+
   document.getElementById("hubBtnProfile").textContent = tr.btnProfile;
   document.getElementById("hubBtnLeaderboard").textContent = tr.btnLeaderboard;
   document.getElementById("hubBtnSettings").textContent = tr.btnSettings;
@@ -301,7 +306,9 @@ function applyLanguageToUI() {
   document.getElementById("optAutoRollNo").textContent = tr.optOffManual;
   document.getElementById("optAutoRollYes").textContent = tr.optOnAutoRoll;
 
-  if (isAiMatch) {
+  if (isTutorialMode) {
+    document.getElementById("netStatus").textContent = tr.netTutorialMode;
+  } else if (isAiMatch) {
     document.getElementById("netStatus").textContent = tr.netAiMode(myAiDifficulty);
   } else if (myRole === "SPECTATOR" && activeRoomCode) {
     document.getElementById("netStatus").textContent = tr.spectatingStatus(activeRoomCode);
@@ -1005,7 +1012,6 @@ function toggleSound() {
   if (soundEnabled) playCheckerClack("MOVE");
 }
 
-// mode can be: "MOVE" (open point), "HIT" (Portes blot knock to bar), or "PIN" (Plakoto capture/trap)
 function playCheckerClack(mode = "MOVE") {
   const ctx = ensureAudio();
   if (!ctx) return;
@@ -1231,7 +1237,6 @@ function render() {
   const v = currentVariant();
   const tr = t();
 
-  // Always keep playerNames synchronized with state.playerNames if present
   if (state.playerNames) {
     if (state.playerNames.W) playerNames.W = state.playerNames.W;
     if (state.playerNames.B) playerNames.B = state.playerNames.B;
@@ -1271,20 +1276,20 @@ function render() {
   }
 
   const rollBtn = document.getElementById("rollBtn");
-  rollBtn.style.display = (isSpectator || (state.autoRoll && state.phase === "PLAY")) ? "none" : "inline-block";
-  rollBtn.disabled = isSpectator || state.phase === "SET_OVER" || isWaitingForReconnect || state.rolled || isAnimatingDice || isAnimatingChecker || !isMyTurn;
+  rollBtn.style.display = (isSpectator || isTutorialMode || (state.autoRoll && state.phase === "PLAY")) ? "none" : "inline-block";
+  rollBtn.disabled = isSpectator || isTutorialMode || state.phase === "SET_OVER" || isWaitingForReconnect || state.rolled || isAnimatingDice || isAnimatingChecker || !isMyTurn;
 
   const undoBtn = document.getElementById("undoBtn");
   undoBtn.style.display = isSpectator ? "none" : "inline-block";
   undoBtn.disabled = isSpectator || state.phase !== "PLAY" || isWaitingForReconnect || !state.rolled || isAnimatingDice || isAnimatingChecker || !isMyTurn || turnHistory.length === 0;
 
   const resignBtn = document.getElementById("resignBtn");
-  resignBtn.style.display = isSpectator ? "none" : "inline-block";
-  resignBtn.disabled = isSpectator || state.phase !== "PLAY" || isWaitingForReconnect || isAnimatingDice || isAnimatingChecker;
+  resignBtn.style.display = (isSpectator || isTutorialMode) ? "none" : "inline-block";
+  resignBtn.disabled = isSpectator || isTutorialMode || state.phase !== "PLAY" || isWaitingForReconnect || isAnimatingDice || isAnimatingChecker;
 
   const endBtn = document.getElementById("endTurnBtn");
-  endBtn.style.display = (!isSpectator && state.requireEndTurn) ? "inline-block" : "none";
-  endBtn.disabled = isSpectator || !turnDone || isWaitingForReconnect || isAnimatingDice || isAnimatingChecker || !isMyTurn || isFevgaStartingPrimeOccupied(state, state.turn);
+  endBtn.style.display = (!isSpectator && !isTutorialMode && state.requireEndTurn) ? "inline-block" : "none";
+  endBtn.disabled = isSpectator || isTutorialMode || !turnDone || isWaitingForReconnect || isAnimatingDice || isAnimatingChecker || !isMyTurn || isFevgaStartingPrimeOccupied(state, state.turn);
   if (!endBtn.disabled && state.requireEndTurn) {
     endBtn.classList.add("ready-pulse");
   } else {

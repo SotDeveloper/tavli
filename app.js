@@ -1,4 +1,4 @@
-// Greek Tavli Online — Core Game Engine, Fevga Rules, AI, Spectator Relay & WebRTC Multiplayer (app.js — v18)
+// Greek Tavli Online — Core Game Engine, Fevga Rules, AI, Spectator Handshake Fix, Tutorial & WebRTC Multiplayer (app.js — v19)
 
 const PEER_CONFIG = {
   config: {
@@ -68,9 +68,17 @@ let activeRoomCode = "";
 let opponentLeftHandled = false;
 let localTypingTimeout = null;
 let remoteTypingTimeout = null;
+let helloRetryTimer = null;  // Handshake retry loop for reliable Spectator & Joiner connection
 
 let packetQueue = [];
 let isProcessingPacket = false;
+
+function stopHelloRetry() {
+  if (helloRetryTimer) {
+    clearInterval(helloRetryTimer);
+    helloRetryTimer = null;
+  }
+}
 
 function updateSpectatorBadge(count) {
   const badge = document.getElementById("spectatorCountBadge");
@@ -142,6 +150,10 @@ function closePlayConfigModal() {
 async function confirmStartSelectedMode() {
   ensureAudio();
   const tr = t();
+  isTutorialMode = false;
+  const tutPanel = document.getElementById("tutorialCoachPanel");
+  if (tutPanel) tutPanel.style.display = "none";
+
   checkPersistentLoginSession();
 
   const guestAuthBox = document.getElementById("inviteGuestAuthSection");
@@ -233,7 +245,7 @@ async function confirmStartSelectedMode() {
 }
 
 function saveActiveRoomBackup() {
-  if (!activeRoomCode || isAiMatch || myRole === "SPECTATOR" || state.phase === "SET_OVER") return;
+  if (!activeRoomCode || isAiMatch || isTutorialMode || myRole === "SPECTATOR" || state.phase === "SET_OVER") return;
   try {
     state.playerNames = { W: playerNames.W, B: playerNames.B };
     const backup = {
@@ -303,7 +315,7 @@ function getMostRolledComboStr(countsMap) {
 }
 
 function recordWinEventToDatabase(winEv) {
-  if (isAiMatch || myRole === "SPECTATOR") return;
+  if (isAiMatch || isTutorialMode || myRole === "SPECTATOR") return;
   if (!winEv || !winEv.id || winEv.id === lastRecordedWinEventId) return;
   lastRecordedWinEventId = winEv.id;
 
@@ -422,7 +434,7 @@ function setPt(idx, owner, count) {
 function checkTriggerAutoRollOrAI() {
   if (autoRollTimer) { clearTimeout(autoRollTimer); autoRollTimer = null; }
   if (aiTurnTimer) { clearTimeout(aiTurnTimer); aiTurnTimer = null; }
-  if (state.phase === "SET_OVER" || isWaitingForReconnect || myRole === "SPECTATOR") return;
+  if (state.phase === "SET_OVER" || isWaitingForReconnect || isTutorialMode || myRole === "SPECTATOR") return;
 
   if (isAiMatch && state.turn === "B" && !state.rolled && !isAnimatingDice && !isAnimatingChecker) {
     aiTurnTimer = setTimeout(() => {
@@ -445,7 +457,7 @@ function checkTriggerAutoRollOrAI() {
 }
 
 function handleRoll(triggeredByAi = false) {
-  if (myRole === "SPECTATOR") return;
+  if (myRole === "SPECTATOR" || isTutorialMode) return;
   if (state.phase === "SET_OVER" || isWaitingForReconnect || state.rolled || isAnimatingDice || isAnimatingChecker) return;
   if (!triggeredByAi && myRole !== "BOTH" && myRole !== state.turn) return;
 
@@ -1084,6 +1096,15 @@ function executeMoveSequence(steps, onSequenceDone = null) {
     state.lastAction = soundAction;
     state.lastMoveAnim = { from: startOrigin, to: finalDest, player };
 
+    // If in Interactive Tutorial Mode, check if the player solved the lesson!
+    if (isTutorialMode) {
+      render();
+      if (typeof checkTutorialStepCompletion === "function") {
+        checkTutorialStepCompletion();
+      }
+      return;
+    }
+
     if (manaWin) {
       finishGame(player, 2, t().manaWin, { from: startOrigin, to: finalDest, player });
       return;
@@ -1137,7 +1158,7 @@ function handleUndo() {
 }
 
 function handleEndTurn(forcedOrAuto = false) {
-  if (myRole === "SPECTATOR") return;
+  if (myRole === "SPECTATOR" || isTutorialMode) return;
   if (!state.rolled || isWaitingForReconnect || isAnimatingDice || isAnimatingChecker) return;
   if (!forcedOrAuto && myRole !== "BOTH" && myRole !== state.turn) return;
   if (!forcedOrAuto && state.dice.length > 0 && hasAnyLegalMove(state.turn)) return;
@@ -1185,7 +1206,7 @@ function finishGame(winner, pts, reason, winningMoveAnim = null) {
   const isMatchOver = (state.scoreW >= target || state.scoreB >= target);
 
   let winEv = null;
-  if (!isAiMatch) {
+  if (!isAiMatch && !isTutorialMode) {
     winEv = {
       id: Date.now() + "-" + cryptoDie(),
       winner,
@@ -1235,7 +1256,7 @@ function finishGame(winner, pts, reason, winningMoveAnim = null) {
 }
 
 function openResignOfferModal() {
-  if (myRole === "SPECTATOR" || state.phase !== "PLAY" || isWaitingForReconnect) return;
+  if (myRole === "SPECTATOR" || isTutorialMode || state.phase !== "PLAY" || isWaitingForReconnect) return;
   document.getElementById("resignOfferModal").style.display = "flex";
 }
 
@@ -1244,7 +1265,7 @@ function closeResignOfferModal() {
 }
 
 function sendResignOffer(pts) {
-  if (myRole === "SPECTATOR") return;
+  if (myRole === "SPECTATOR" || isTutorialMode) return;
   closeResignOfferModal();
   const validPts = pts === 2 ? 2 : 1;
   const resigningRole = myRole === "BOTH" ? state.turn : myRole;
@@ -1466,8 +1487,13 @@ function handlePlayAgainSameSettings() {
 }
 
 function handleExitToInitialMenu(notifyPeer = true) {
+  stopHelloRetry();
   stopDisconnectCountdown();
   clearActiveRoomBackup();
+  isTutorialMode = false;
+  const tutPanel = document.getElementById("tutorialCoachPanel");
+  if (tutPanel) tutPanel.style.display = "none";
+
   document.getElementById("setSummaryModal").style.display = "none";
   document.getElementById("playConfigModal").style.display = "none";
 
@@ -1583,8 +1609,19 @@ function awardForfeitSetWinToConnectedPlayer() {
 }
 
 // ============================================================================
-// WEBRTC MULTIPLAYER & MULTI-SPECTATOR RELAY HUB
+// WEBRTC MULTIPLAYER & RELIABLE SPECTATOR HANDSHAKE RELAY HUB (v19 FIX)
 // ============================================================================
+function safeSend(targetConn, payload) {
+  if (!targetConn) return;
+  if (targetConn.open) {
+    try { targetConn.send(payload); } catch (_) {}
+  } else {
+    targetConn.once("open", () => {
+      try { targetConn.send(payload); } catch (_) {}
+    });
+  }
+}
+
 function broadcastFromHostToAll(packet, excludeConn = null) {
   if (myRole !== "W") return;
   if (conn && conn.open && conn !== excludeConn) {
@@ -1608,8 +1645,10 @@ function broadcastSpectatorCountFromHost() {
 
 function hostRoom(reconnectingCode = null, restoredBackup = null) {
   ensureAudio();
+  stopHelloRetry();
   stopDisconnectCountdown();
   isAiMatch = false;
+  isTutorialMode = false;
   spectatorConns = [];
   const code = reconnectingCode || generateSecureRoomCode();
   activeRoomCode = code;
@@ -1659,7 +1698,9 @@ function hostRoom(reconnectingCode = null, restoredBackup = null) {
 
 function joinRoomWithCode(rawCode, asSpectator = false) {
   ensureAudio();
+  stopHelloRetry();
   isAiMatch = false;
+  isTutorialMode = false;
   spectatorConns = [];
   const code = String(rawCode || "").trim().toUpperCase();
   if (code.length !== 6) return alert(t().enter6CodeAlert);
@@ -1700,14 +1741,21 @@ function joinRoomWithCode(rawCode, asSpectator = false) {
 
   document.getElementById("netStatus").textContent = t().connectingTo(code);
   peer.on("open", () => {
-    conn = peer.connect("tavli-net-" + code, { reliable: true });
+    conn = peer.connect("tavli-net-" + code, {
+      reliable: true,
+      metadata: {
+        role: asSpectator ? "SPECTATOR" : "B",
+        name: myPlayerName,
+        color: myChosenColor
+      }
+    });
     setupClientConn(code, asSpectator);
   });
   peer.on("disconnected", () => peer.reconnect());
 }
 
 function handleOpponentLeft() {
-  if (myRole === "SPECTATOR" || opponentLeftHandled || state.phase === "SET_OVER") return;
+  if (myRole === "SPECTATOR" || isTutorialMode || opponentLeftHandled || state.phase === "SET_OVER") return;
   opponentLeftHandled = true;
   isWaitingForReconnect = true;
 
@@ -1737,7 +1785,10 @@ function handleOpponentLeft() {
 
     if (myRole === "B" && isWaitingForReconnect && peer && !peer.destroyed && Math.ceil(rem / 1000) % 4 === 0) {
       try {
-        const probeConn = peer.connect("tavli-net-" + activeRoomCode, { reliable: true });
+        const probeConn = peer.connect("tavli-net-" + activeRoomCode, {
+          reliable: true,
+          metadata: { role: "B", name: myPlayerName, color: myChosenColor }
+        });
         probeConn.on("open", () => {
           conn = probeConn;
           setupClientConn(activeRoomCode, false, true);
@@ -1763,7 +1814,44 @@ function syncDatabaseWithPeer() {
   }
 }
 
+// Host-side connection handler: handles both immediate metadata & HELLO packets so Spectators never get stuck on "Connecting..."
 function setupIncomingHostConn(incomingConn, code) {
+  const registerSpectatorAndSendAck = (rawName) => {
+    const cleanName = String(rawName || "Spectator").trim().slice(0, 16) || "Spectator";
+    const firstTime = !incomingConn._ackSent;
+    incomingConn._isSpectator = true;
+    incomingConn._spectatorName = cleanName;
+    incomingConn._ackSent = true;
+
+    if (!spectatorConns.includes(incomingConn)) {
+      spectatorConns.push(incomingConn);
+    }
+    broadcastSpectatorCountFromHost();
+
+    state.playerNames = { W: playerNames.W, B: playerNames.B };
+    safeSend(incomingConn, {
+      type: "HELLO_ACK",
+      assignedRole: "SPECTATOR",
+      playerNames: cloneState(playerNames),
+      state: cloneState(state),
+      spectatorCount: spectatorConns.length,
+      dbSnapshot: window.TavliDB.exportPublicSnapshot()
+    });
+
+    if (firstTime) {
+      const joinMsg = t().spectatorJoinedChat(cleanName);
+      appendChatLine(t().sysLabel, joinMsg, "SYS");
+      broadcastFromHostToAll({ type: "SYS_CHAT", text: joinMsg }, incomingConn);
+    }
+  };
+
+  // Proactively acknowledge spectators as soon as the WebRTC DataChannel opens using PeerJS connection metadata
+  incomingConn.on("open", () => {
+    if (incomingConn.metadata && incomingConn.metadata.role === "SPECTATOR") {
+      registerSpectatorAndSendAck(incomingConn.metadata.name);
+    }
+  });
+
   incomingConn.on("data", packet => {
     if (!packet || typeof packet !== "object") return;
 
@@ -1777,30 +1865,14 @@ function setupIncomingHostConn(incomingConn, code) {
       const isSpectatorConn = (packet.role === "SPECTATOR" || playerSlotTaken);
 
       if (isSpectatorConn) {
-        incomingConn._isSpectator = true;
-        incomingConn._spectatorName = cleanName;
-        if (!spectatorConns.includes(incomingConn)) {
-          spectatorConns.push(incomingConn);
-        }
-        broadcastSpectatorCountFromHost();
-
-        state.playerNames = { W: playerNames.W, B: playerNames.B };
-        incomingConn.send({
-          type: "HELLO_ACK",
-          assignedRole: "SPECTATOR",
-          playerNames: cloneState(playerNames),
-          state: cloneState(state),
-          spectatorCount: spectatorConns.length,
-          dbSnapshot: window.TavliDB.exportPublicSnapshot()
-        });
-
-        const joinMsg = t().spectatorJoinedChat(cleanName);
-        appendChatLine(t().sysLabel, joinMsg, "SYS");
-        broadcastFromHostToAll({ type: "SYS_CHAT", text: joinMsg }, incomingConn);
+        registerSpectatorAndSendAck(cleanName);
         return;
       }
 
+      // Otherwise, this is our Opponent ('B')
+      const alreadyInitializedOpponent = (incomingConn === conn && incomingConn._ackSent);
       incomingConn._isSpectator = false;
+      incomingConn._ackSent = true;
       conn = incomingConn;
       stopDisconnectCountdown();
       document.getElementById("netStatus").textContent = t().roomLocked(code);
@@ -1810,6 +1882,18 @@ function setupIncomingHostConn(incomingConn, code) {
       playerNames.B = cleanName;
       state.playerNames = { W: playerNames.W, B: playerNames.B };
       state.colors.B = (reqColor === state.colors.W) ? getDistinctFallbackColor(state.colors.W) : reqColor;
+
+      if (alreadyInitializedOpponent) {
+        safeSend(conn, {
+          type: "HELLO_ACK",
+          assignedRole: "B",
+          playerNames: cloneState(playerNames),
+          state: cloneState(state),
+          spectatorCount: spectatorConns.length,
+          dbSnapshot: window.TavliDB.exportPublicSnapshot()
+        });
+        return;
+      }
 
       const localHasProgress = (state.scoreW > 0 || state.scoreB > 0 || state.rolled || (state.setGamesLog && state.setGamesLog.length > 0));
       if (packet.isReconnect && (localHasProgress || packet.savedState)) {
@@ -1822,7 +1906,7 @@ function setupIncomingHostConn(incomingConn, code) {
         setStatus(t().oppRejoinedStatus(cleanName));
         saveActiveRoomBackup();
 
-        conn.send({
+        safeSend(conn, {
           type: "HELLO_ACK",
           assignedRole: "B",
           playerNames: cloneState(playerNames),
@@ -1847,7 +1931,7 @@ function setupIncomingHostConn(incomingConn, code) {
       resetSetTracking();
       initGame("ROLL_OFF");
 
-      conn.send({
+      safeSend(conn, {
         type: "HELLO_ACK",
         assignedRole: "B",
         playerNames: cloneState(playerNames),
@@ -1884,41 +1968,70 @@ function setupIncomingHostConn(incomingConn, code) {
   });
 }
 
+// Client-side connection handler with automatic 1.2s Handshake Retry Loop until HELLO_ACK arrives
 function setupClientConn(code, asSpectator = false, isReconnectingAttempt = false) {
-  conn.on("open", () => {
-    const wasWaiting = isWaitingForReconnect;
-    stopDisconnectCountdown();
-    document.getElementById("netStatus").textContent =
-      asSpectator ? t().spectatingStatus(code) : t().roomLocked(code);
+  let receivedAck = false;
 
+  const sendHelloPacket = () => {
+    if (!conn || !conn.open || receivedAck) return;
+    const wasWaiting = isWaitingForReconnect;
     const backup = !asSpectator ? getActiveRoomBackup(code) : null;
     const hasProgress = !asSpectator && (state.scoreW > 0 || state.scoreB > 0 || state.rolled || (state.setGamesLog && state.setGamesLog.length > 0));
 
-    conn.send({
-      type: "HELLO",
-      role: asSpectator ? "SPECTATOR" : "B",
-      name: myPlayerName,
-      color: myChosenColor,
-      isReconnect: Boolean(!asSpectator && (wasWaiting || isReconnectingAttempt || hasProgress || backup)),
-      savedState: (!asSpectator && (wasWaiting || hasProgress)) ? cloneState(state) : (backup ? backup.state : null),
-      savedNames: (!asSpectator && (wasWaiting || hasProgress)) ? cloneState(playerNames) : (backup ? backup.playerNames : null),
-      dbSnapshot: window.TavliDB.exportPublicSnapshot()
-    });
-  });
+    try {
+      conn.send({
+        type: "HELLO",
+        role: asSpectator ? "SPECTATOR" : "B",
+        name: myPlayerName,
+        color: myChosenColor,
+        isReconnect: Boolean(!asSpectator && (wasWaiting || isReconnectingAttempt || hasProgress || backup)),
+        savedState: (!asSpectator && (wasWaiting || hasProgress)) ? cloneState(state) : (backup ? backup.state : null),
+        savedNames: (!asSpectator && (wasWaiting || hasProgress)) ? cloneState(playerNames) : (backup ? backup.playerNames : null),
+        dbSnapshot: window.TavliDB.exportPublicSnapshot()
+      });
+    } catch (_) {}
+  };
 
-  conn.on("close", () => handleOpponentLeft());
-  conn.on("error", () => handleOpponentLeft());
+  const onChannelOpen = () => {
+    stopDisconnectCountdown();
+    sendHelloPacket();
+    stopHelloRetry();
+    helloRetryTimer = setInterval(() => {
+      if (receivedAck || !conn || !conn.open) {
+        stopHelloRetry();
+        return;
+      }
+      sendHelloPacket();
+    }, 1200);
+  };
+
+  conn.on("open", onChannelOpen);
+  if (conn.open) onChannelOpen();
+
+  conn.on("close", () => {
+    stopHelloRetry();
+    handleOpponentLeft();
+  });
+  conn.on("error", () => {
+    stopHelloRetry();
+    handleOpponentLeft();
+  });
 
   conn.on("data", packet => {
     if (!packet || typeof packet !== "object") return;
 
     if (packet.type === "HELLO_ACK") {
+      receivedAck = true;
+      stopHelloRetry();
+
       if (packet.dbSnapshot) {
         window.TavliDB.mergePublicSnapshot(packet.dbSnapshot);
       }
       if (packet.assignedRole === "SPECTATOR") {
         myRole = "SPECTATOR";
         document.getElementById("netStatus").textContent = t().spectatingStatus(code);
+      } else {
+        document.getElementById("netStatus").textContent = t().roomLocked(code);
       }
       if (packet.playerNames) {
         if (packet.playerNames.W) playerNames.W = packet.playerNames.W;
@@ -1935,6 +2048,14 @@ function setupClientConn(code, asSpectator = false, isReconnectingAttempt = fals
       saveActiveRoomBackup();
       render();
       return;
+    }
+
+    // If a STATE packet arrives before HELLO_ACK, also mark connection as acknowledged
+    if (packet.type === "STATE") {
+      receivedAck = true;
+      stopHelloRetry();
+      document.getElementById("netStatus").textContent =
+        (myRole === "SPECTATOR") ? t().spectatingStatus(code) : t().roomLocked(code);
     }
 
     handleCommonPacketOnPeer(packet, conn);
@@ -2168,7 +2289,7 @@ window.addEventListener("beforeunload", notifyLeavingTab);
 window.addEventListener("pagehide", notifyLeavingTab);
 
 function syncState() {
-  if (myRole === "SPECTATOR") return;
+  if (myRole === "SPECTATOR" || isTutorialMode) return;
   if (myRole === "W" && myPlayerName) playerNames.W = myPlayerName;
   if (myRole === "B" && myPlayerName) playerNames.B = myPlayerName;
   state.playerNames = { W: playerNames.W, B: playerNames.B };
